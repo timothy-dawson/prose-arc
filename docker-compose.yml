@@ -1,0 +1,179 @@
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 with ltree extension
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: prosearc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: prosearc
+      POSTGRES_PASSWORD: prosearc
+      POSTGRES_DB: prosearc
+    ports:
+      - "5533:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./src/backend/scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prosearc -d prosearc"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Redis 7
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: prosearc-redis
+    restart: unless-stopped
+    ports:
+      - "6480:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # MinIO — S3-compatible object storage (GCS emulator for local dev)
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: prosearc-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9100:9000"   # S3 API
+      - "9101:9001"   # Web console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Init container: creates the prosearc bucket after MinIO starts
+  minio-init:
+    image: minio/mc:latest
+    container_name: prosearc-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_BUCKET: prosearc
+    volumes:
+      - ./src/backend/scripts/init-minio.sh:/init-minio.sh:ro
+    entrypoint: ["/bin/sh", "/init-minio.sh"]
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Backend — FastAPI + uvicorn (hot-reload via volume mount)
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: prosearc-backend
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    env_file: .env
+    environment:
+      # Inter-container URLs use service names + internal ports (unchanged)
+      DATABASE_URL: postgresql+asyncpg://prosearc:prosearc@postgres:5432/prosearc
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: prosearc
+      MINIO_USE_SSL: "false"
+      STORAGE_BACKEND: minio
+      APP_ENV: development
+      APP_URL: http://localhost:3100
+      API_URL: http://localhost:8100
+      CORS_ORIGINS: http://localhost:3100
+    ports:
+      - "8100:8000"
+    volumes:
+      - ./src/backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # Celery Worker — all 3 queues in dev (default, ai, export)
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: prosearc-worker
+    restart: unless-stopped
+    command: celery -A app.tasks.celery_app worker -Q default,ai,export --loglevel=info
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://prosearc:prosearc@postgres:5432/prosearc
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: prosearc
+      MINIO_USE_SSL: "false"
+      STORAGE_BACKEND: minio
+      APP_ENV: development
+    volumes:
+      - ./src/backend:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Frontend — Vite dev server (HMR)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: prosearc-frontend
+    restart: unless-stopped
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+    environment:
+      VITE_API_URL: http://localhost:8100
+    ports:
+      - "3100:3000"
+    volumes:
+      - ./src/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres-data:
+  minio-data:

@@ -1,0 +1,17 @@
+# Production overrides for docker-compose.yml
+# Use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# In production: backend and frontend are Cloud Run services, not local containers.
+# This file is a placeholder — expand in Phase 1e.
+
+services:
+  backend:
+    build:
+      target: production
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    restart: always
+
+  frontend:
+    build:
+      target: production
+    restart: always

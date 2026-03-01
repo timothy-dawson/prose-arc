@@ -1,0 +1,118 @@
+(trapped) error reading bcrypt version
+2026-02-28 18:49:08 Traceback (most recent call last):
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+2026-02-28 18:49:08     version = _bcrypt.__about__.__version__
+2026-02-28 18:49:08               ^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08 AttributeError: module 'bcrypt' has no attribute '__about__'
+2026-02-28 18:49:08 detected 'bcrypt' backend, version '<unknown>'
+2026-02-28 18:49:08 'bcrypt' backend lacks $2$ support, enabling workaround
+2026-02-28 18:49:08 ROLLBACK
+2026-02-28 18:49:08 ERROR:    Exception in ASGI application
+2026-02-28 18:49:08 Traceback (most recent call last):
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/uvicorn/protocols/http/httptools_impl.py", line 416, in run_asgi
+2026-02-28 18:49:08     result = await app(  # type: ignore[func-returns-value]
+2026-02-28 18:49:08              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+2026-02-28 18:49:08     return await self.app(scope, receive, send)
+2026-02-28 18:49:08            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1160, in __call__
+2026-02-28 18:49:08     await super().__call__(scope, receive, send)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/applications.py", line 107, in __call__
+2026-02-28 18:49:08     await self.middleware_stack(scope, receive, send)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+2026-02-28 18:49:08     raise exc
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+2026-02-28 18:49:08     await self.app(scope, receive, _send)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 95, in __call__
+2026-02-28 18:49:08     await self.simple_response(scope, receive, send, request_headers=headers)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 153, in simple_response
+2026-02-28 18:49:08     await self.app(scope, receive, send)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/sessions.py", line 85, in __call__
+2026-02-28 18:49:08     await self.app(scope, receive, send_wrapper)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+2026-02-28 18:49:08     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-02-28 18:49:08     raise exc
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-02-28 18:49:08     await app(scope, receive, sender)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+2026-02-28 18:49:08     await self.app(scope, receive, send)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+2026-02-28 18:49:08     await self.middleware_stack(scope, receive, send)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+2026-02-28 18:49:08     await route.handle(scope, receive, send)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+2026-02-28 18:49:08     await self.app(scope, receive, send)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 122, in app
+2026-02-28 18:49:08     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+2026-02-28 18:49:08     raise exc
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+2026-02-28 18:49:08     await app(scope, receive, sender)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 108, in app
+2026-02-28 18:49:08     response = await f(request)
+2026-02-28 18:49:08                ^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 532, in app
+2026-02-28 18:49:08     raw_response = await run_endpoint_function(
+2026-02-28 18:49:08                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/fastapi/routing.py", line 316, in run_endpoint_function
+2026-02-28 18:49:08     return await dependant.call(**values)
+2026-02-28 18:49:08            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/app/app/modules/identity/router.py", line 59, in register
+2026-02-28 18:49:08     return await service.register_user(data)
+2026-02-28 18:49:08            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/app/app/modules/identity/service.py", line 47, in register_user
+2026-02-28 18:49:08     hashed_password=_pwd_context.hash(data.password),
+2026-02-28 18:49:08                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/context.py", line 2258, in hash
+2026-02-28 18:49:08     return record.hash(secret, **kwds)
+2026-02-28 18:49:08            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/utils/handlers.py", line 779, in hash
+2026-02-28 18:49:08     self.checksum = self._calc_checksum(secret)
+2026-02-28 18:49:08                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 591, in _calc_checksum
+2026-02-28 18:49:08     self._stub_requires_backend()
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2254, in _stub_requires_backend
+2026-02-28 18:49:08     cls.set_backend()
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2156, in set_backend
+2026-02-28 18:49:08     return owner.set_backend(name, dryrun=dryrun)
+2026-02-28 18:49:08            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2163, in set_backend
+2026-02-28 18:49:08     return cls.set_backend(name, dryrun=dryrun)
+2026-02-28 18:49:08            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2188, in set_backend
+2026-02-28 18:49:08     cls._set_backend(name, dryrun)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2311, in _set_backend
+2026-02-28 18:49:08     super(SubclassBackendMixin, cls)._set_backend(name, dryrun)
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/utils/handlers.py", line 2224, in _set_backend
+2026-02-28 18:49:08     ok = loader(**kwds)
+2026-02-28 18:49:08          ^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 626, in _load_backend_mixin
+2026-02-28 18:49:08     return mixin_cls._finalize_backend_mixin(name, dryrun)
+2026-02-28 18:49:08            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 421, in _finalize_backend_mixin
+2026-02-28 18:49:08     if detect_wrap_bug(IDENT_2A):
+2026-02-28 18:49:08        ^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 380, in detect_wrap_bug
+2026-02-28 18:49:08     if verify(secret, bug_hash):
+2026-02-28 18:49:08        ^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/utils/handlers.py", line 792, in verify
+2026-02-28 18:49:08     return consteq(self._calc_checksum(secret), chk)
+2026-02-28 18:49:08                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08   File "/opt/venv/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 655, in _calc_checksum
+2026-02-28 18:49:08     hash = _bcrypt.hashpw(secret, config)
+2026-02-28 18:49:08            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-28 18:49:08 ValueError: password cannot be longer than 72 bytes, truncate manually if necessary (e.g. my_password[:72])
+2026-02-28 18:49:10 BEGIN (implicit)
+2026-02-28 18:49:10 SELECT 1
+2026-02-28 18:49:10 [cached since 151.3s ago] ()
+2026-02-28 18:49:10 ROLLBACK
+2026-02-28 18:49:10 2026-03-01 00:49:10,648 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-28 18:49:10 2026-03-01 00:49:10,648 INFO sqlalchemy.engine.Engine SELECT 1
+2026-02-28 18:49:10 2026-03-01 00:49:10,648 INFO sqlalchemy.engine.Engine [cached since 151.3s ago] ()
+2026-02-28 18:49:10 2026-03-01 00:49:10,649 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-02-28 18:49:10 INFO:     127.0.0.1:50198 - "GET /health HTTP/1.1" 200 OK
+2026-02-28 18:49:20 2026-03-01 00:49:20,696 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-28 18:49:20 2026-03-01 00:49:20,696 INFO sqlalchemy.engine.Engine SELECT 1
+2026-02-28 18:49:20 2026-03-01 00:49:20,696 INFO sqlalchemy.engine.Engine [cached since 161.4s ago] ()
+2026-02-28 18:49:20 2026-03-01 00:49:20,697 INFO sqlalchemy.engine.Engine ROLLBACK
