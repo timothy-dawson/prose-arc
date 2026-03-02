@@ -27,7 +27,7 @@ The prioritization is driven by market gaps: **unified writing + plotting** is t
 
 | Feature | Description | Rationale |
 |---------|-------------|-----------|
-| **Rich text editor** | ProseMirror-based block editor with markdown shortcuts, inline formatting, comments | Core product. Non-negotiable. |
+| **Rich text editor** | TipTap-based block editor with markdown shortcuts, inline formatting, comments | Core product. Non-negotiable. |
 | **Binder / tree view** | Hierarchical document tree (Book → Part → Chapter → Scene). Drag-drop reorder. | Scrivener's #1 feature. Authors expect this. |
 | **Basic outlining** | Per-scene synopsis cards, chapter summaries, kanban board view | Unifies plotting + writing — our key differentiator vs Scrivener |
 | **Worldbuilding codex** | Structured entries: Characters, Locations, Items, Lore, Custom types. Rich text + metadata fields. | Novelcrafter charges subscription for this. We include it in one-time purchase. |
@@ -277,14 +277,14 @@ CREATE INDEX idx_binder_path ON binder_nodes USING GIST(path);
 -- This is the CURRENT version. History lives in versioning module.
 CREATE TABLE document_content (
     binder_node_id UUID PRIMARY KEY REFERENCES binder_nodes(id) ON DELETE CASCADE,
-    content_prosemirror JSONB,    -- ProseMirror document JSON
+    content_prosemirror JSONB,    -- TipTap document JSON (ProseMirror-compatible format)
     content_text TEXT,            -- plain text extracted (for search + word count)
-    content_compressed BYTEA,     -- zstd-compressed ProseMirror JSON for large docs
+    content_compressed BYTEA,     -- zstd-compressed TipTap JSON for large docs
     byte_size INT,                -- uncompressed size for quota tracking
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- DECISION: We store ProseMirror JSON in JSONB for documents < 64KB.
+-- DECISION: We store TipTap JSON (ProseMirror-compatible) in JSONB for documents < 64KB.
 -- For documents > 64KB (rare — that's ~12,000 words in one scene), we use
 -- content_compressed (zstd BYTEA) and NULL out content_prosemirror.
 -- content_text is ALWAYS populated for full-text search.
@@ -1101,7 +1101,7 @@ R = reads from (via module's query interface, NOT direct DB access)
 
 | Decision | Choice | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
-| Editor framework | ProseMirror | TipTap, Slate, Lexical | Most mature, best collab support (Yjs binding), full control over schema. TipTap is a wrapper around ProseMirror — we don't need the abstraction. |
+| Editor framework | TipTap | ProseMirror (raw), Slate, Lexical | React-first API; ships all required extensions (underline, subscript, superscript, text-align, link, image, table, colour, highlight) as npm packages. `@tiptap/extension-collaboration` provides Yjs integration for Phase 3a. Raw ProseMirror was abandoned after Vite/ESM incompatibilities and maintenance overhead of the custom schema/keymap/inputrules layer. TipTap produces identical ProseMirror JSON — no backend migration required. |
 | CRDT library | Yjs | Automerge, Diamond Types | Yjs has proven ProseMirror binding, good perf, active maintenance. Battle-tested at scale (e.g., Hocuspocus). |
 | Desktop framework | Tauri | Electron | 10x smaller binary, lower memory. Rust backend can also handle local SQLite for offline. |
 | Versioning | Delta (JSON Patch) | Full copies, OT log | 96% storage savings. JSON Patch is standardized, easy to apply forward/backward. |

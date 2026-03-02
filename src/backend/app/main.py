@@ -55,6 +55,8 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 from app.api.v1.health import router as health_router  # noqa: E402
 from app.modules.identity.router import router as identity_router  # noqa: E402
+from app.modules.manuscript.router import router as manuscript_router  # noqa: E402
 
 app.include_router(health_router)
 app.include_router(identity_router, prefix="/api/v1")
+app.include_router(manuscript_router, prefix="/api/v1")

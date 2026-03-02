@@ -38,6 +38,9 @@ dependencies = [
     # Object storage (MinIO via S3, GCS)
     "boto3>=1.35.0",
 
+    # Compression (large document storage)
+    "zstandard>=0.23.0",
+
     # Logging
     "structlog>=24.4.0",
 

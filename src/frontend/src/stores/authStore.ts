@@ -22,18 +22,20 @@ interface AuthState {
   user: AuthUser | null
   accessToken: string | null
   refreshToken: string | null
+  /** True once the persist middleware has rehydrated from localStorage. */
+  _hasHydrated: boolean
   setAuth: (auth: { user?: AuthUser; accessToken: string; refreshToken: string }) => void
   setUser: (user: AuthUser) => void
   clearAuth: () => void
-  isAuthenticated: boolean
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       accessToken: null,
       refreshToken: null,
+      _hasHydrated: false,
 
       setAuth: ({ user, accessToken, refreshToken }) =>
         set((state) => ({
@@ -45,14 +47,10 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user }),
 
       clearAuth: () => set({ user: null, accessToken: null, refreshToken: null }),
-
-      get isAuthenticated() {
-        return !!get().accessToken
-      },
     }),
     {
       name: 'prose-arc-auth',
-      // Only persist the token fields — not derived values
+      // Only persist the token fields — not derived values or the hydration flag
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
@@ -61,3 +59,14 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 )
+
+// Zustand's persist middleware hydrates asynchronously (multiple Promise hops)
+// even for synchronous storage like localStorage. Set _hasHydrated once done so
+// ProtectedRoute doesn't redirect before the stored tokens are merged into state.
+if (useAuthStore.persist.hasHydrated()) {
+  useAuthStore.setState({ _hasHydrated: true })
+} else {
+  useAuthStore.persist.onFinishHydration(() => {
+    useAuthStore.setState({ _hasHydrated: true })
+  })
+}

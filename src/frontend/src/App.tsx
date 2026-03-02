@@ -8,6 +8,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { OAuthCallbackPage } from '@/pages/OAuthCallbackPage'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { ProjectPage } from '@/pages/ProjectPage'
 
 function App() {
   return (
@@ -25,6 +26,8 @@ function App() {
             <Route element={<AppShell />}>
               <Route path="/dashboard" element={<DashboardPage />} />
             </Route>
+            {/* ProjectPage has its own full-screen layout, no AppShell */}
+            <Route path="/projects/:projectId" element={<ProjectPage />} />
           </Route>
 
           {/* 404 fallback */}

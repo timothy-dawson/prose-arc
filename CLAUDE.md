@@ -21,7 +21,7 @@ Read these before starting any work:
 ## Tech Stack
 
 - **Frontend:** React 18 + Vite + TypeScript + Tailwind CSS + Radix UI/shadcn
-- **Editor:** ProseMirror (rich text, markdown shortcuts, collaborative editing)
+- **Editor:** TipTap (React-first ProseMirror wrapper; rich text, markdown shortcuts, collaborative editing via @tiptap/extension-collaboration)
 - **Backend:** FastAPI (Python 3.12+) + SQLAlchemy 2.0 (async) + Alembic
 - **Async Tasks:** Celery + Redis broker (3 queues: default, ai, export)
 - **Database:** PostgreSQL 16 (with ltree extension)
@@ -148,7 +148,7 @@ alembic downgrade -1      # rollback last migration
 
 We're building in 12 phases. See `docs/writing-app-implementation-plan.md` for full details.
 
-**Current phase: 1a — Foundation & Infrastructure**
+**Current phase: 1b — Core Editor & Manuscript Management**
 
 Phase order:
 1. **1a** (W1-3): Foundation — repo scaffold, Docker, auth, CI
@@ -191,7 +191,7 @@ Phase order:
 
 Refer to `docs/writing-app-architecture.md` Appendix B for the full decisions log. Highlights:
 
-- **ProseMirror** over TipTap/Slate/Lexical — most mature, best Yjs binding
+- **TipTap** over raw ProseMirror/Slate/Lexical — React-first API, ships all required extensions (subscript, superscript, alignment, table, colour), Yjs collaboration via `@tiptap/extension-collaboration` (Phase 3a). Raw ProseMirror abandoned due to Vite/ESM friction and maintenance overhead.
 - **Delta-based versioning** with keyframes every 10 snapshots — 96% storage savings
 - **Conditional compression:** < 64KB docs in JSONB, ≥ 64KB in zstd-compressed BYTEA
 - **In-process event bus** — no message queues between modules (it's a monolith)
