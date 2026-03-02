@@ -22,10 +22,9 @@ celery_app = Celery(
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
     include=[
-        # Task modules registered here will be auto-discovered by the worker.
-        # Add task modules here as they are created in future phases.
-        # e.g., "app.tasks.ai_tasks",
-        # e.g., "app.tasks.export_tasks",
+        "app.tasks.manuscript_tasks",
+        # "app.tasks.ai_tasks",
+        # "app.tasks.export_tasks",
     ],
 )
 

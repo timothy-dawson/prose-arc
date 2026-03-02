@@ -108,11 +108,11 @@ P2 (Moat): **7 weeks** → Full vision at ~9.5 months
 
 ### Phase 1b: Core Editor & Manuscript Management (W4–W7)
 
-**Goal:** ProseMirror editor with the binder tree. Authors can create projects, organize chapters/scenes, and write.
+**Goal:** TipTap editor with the binder tree. Authors can create projects, organize chapters/scenes, and write.
 
 #### Features / Modules Built
 - Manuscript module: projects CRUD, binder tree (hierarchical), document content save/load
-- ProseMirror editor: block editing, markdown shortcuts, inline formatting (bold/italic/underline/strikethrough), headings, blockquotes, lists
+- TipTap editor: block editing, markdown shortcuts, inline formatting (bold/italic/underline/strikethrough/highlight/subscript/superscript), headings, text alignment, blockquotes, lists, code blocks, links, images, tables, text colour
 - Binder/tree view: hierarchical sidebar, drag-drop reorder, create/rename/delete nodes
 - Auto-save (debounced, 3-second idle)
 - Full-text search within project (Postgres tsvector)
@@ -124,15 +124,15 @@ P2 (Moat): **7 weeks** → Full vision at ~9.5 months
 - Migration: `projects`, `binder_nodes` (with ltree extension), `document_content` tables
 - CRUD API: `/projects`, `/projects/{id}/binder`, `/projects/{id}/documents/{node_id}`
 - Bulk reorder endpoint for drag-drop (`POST /binder/reorder`)
-- Content save endpoint: accept ProseMirror JSON, extract plain text, compute word count
+- Content save endpoint: accept TipTap JSON (ProseMirror-compatible), extract plain text, compute word count
 - Conditional compression logic (< 64KB → JSONB, ≥ 64KB → zstd BYTEA)
 - Full-text search endpoint (`GET /projects/{id}/search?q=...`) using tsvector + GIN index
 - Celery task: `update_word_counts` (fires on document save event)
 - Celery task: `reindex_search` (fires on document save event)
 
 **Frontend (FE):**
-- ProseMirror integration: custom schema, input rules (markdown shortcuts), key bindings
-- Editor toolbar: formatting buttons, heading selector
+- TipTap integration: `useEditor` hook, StarterKit + extension bundle, `onUpdate` autosave
+- Editor toolbar: full wireframe toolbar (history, marks, headings, alignment, lists, code, link, image, table, colour)
 - Binder tree component: recursive tree with drag-drop (dnd-kit or similar)
 - Project dashboard: list projects, create new, open existing
 - Document view: load content on binder node click, auto-save on change
@@ -140,7 +140,7 @@ P2 (Moat): **7 weeks** → Full vision at ~9.5 months
 - Word count display in status bar
 
 **Fullstack (FS):**
-- ProseMirror ↔ API integration: save/load cycle, optimistic updates
+- TipTap ↔ API integration: save/load cycle, optimistic updates
 - Editor state management: dirty tracking, save indicator
 - Binder tree state sync: optimistic reorder with server reconciliation
 - Performance: lazy-load document content (don't fetch all docs on tree load)
@@ -152,7 +152,7 @@ P2 (Moat): **7 weeks** → Full vision at ~9.5 months
 #### Definition of Done
 - [ ] User creates a project, adds folder/chapter/scene hierarchy via binder tree
 - [ ] Drag-drop reorder works in binder tree, persists to server
-- [ ] ProseMirror editor loads, saves, and restores content correctly
+- [ ] TipTap editor loads, saves, and restores content correctly
 - [ ] Markdown shortcuts work (e.g., `**bold**`, `# heading`, `> quote`)
 - [ ] Auto-save triggers after 3s idle, visual indicator shows save status
 - [ ] Word count updates in real-time in status bar
@@ -190,7 +190,7 @@ P2 (Moat): **7 weeks** → Full vision at ~9.5 months
 **Frontend (FE):**
 - Codex panel: list entries by type (tabs), search/filter
 - Codex entry form: dynamic fields based on entry type (character has Name/Role/Description/Motivation/etc.)
-- Rich text editor for codex entry description (lightweight ProseMirror instance or markdown)
+- Rich text editor for codex entry description (lightweight TipTap instance or markdown)
 - Cross-link UI: link codex entries to each other with relationship type
 - Codex mention in editor: select text → "Link to codex entry" action → creates mention
 - Outline/synopsis panel: per-scene synopsis textarea in binder node details
@@ -538,13 +538,13 @@ P2 (Moat): **7 weeks** → Full vision at ~9.5 months
   - Layout options: 50/50, 60/40, vertical/horizontal split
 - Track changes / suggest mode:
   - Toggle "Suggest" mode in editor toolbar
-  - Insertions highlighted in green, deletions in red (ProseMirror decorations)
+  - Insertions highlighted in green, deletions in red (TipTap extension/decorations)
   - Accept/reject buttons per suggestion, bulk accept/reject all
   - Suggestion attribution (who suggested)
 - Series management UI: create series, add books, reorder, shared codex view
 
 **Fullstack (FS):**
-- ProseMirror plugin for track changes: store suggestions as marks/decorations, persist to `suggestions` table
+- TipTap extension for track changes: store suggestions as marks/decorations, persist to `suggestions` table
 - Split editor state management: two independent editor instances sharing binder tree
 - Series codex aggregation: merge codex entries from all books in series for AI context and reference
 
@@ -796,7 +796,7 @@ Realistically, with a team of 3, some overlap is possible but not all. **Target:
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| ProseMirror learning curve is steep | High | Medium | Allocate fullstack dev full-time to editor. Budget 1 week for prototyping before Phase 1b. Use TipTap as fallback (wraps ProseMirror, easier API). |
+| Editor framework complexity | Low | Medium | Resolved — switched to TipTap (React-first ProseMirror wrapper). All required extensions ship as npm packages; no custom schema/keymap layer needed. |
 | ltree extension not available on Cloud SQL | Low | High | Verify ltree availability on Cloud SQL Postgres 16 in W1. Fallback: materialized path as TEXT column with LIKE queries. |
 | Auto-save conflicts with manual save | Medium | Low | Debounce auto-save (3s), show save indicator, prevent double-submit with request deduplication. |
 
@@ -837,7 +837,7 @@ Realistically, with a team of 3, some overlap is possible but not all. **Target:
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Yjs ↔ ProseMirror binding edge cases | High | High | Use battle-tested y-prosemirror library. Extensive fuzz testing with concurrent edit scenarios. Graceful degradation: fall back to locking if CRDT fails. |
+| Yjs ↔ TipTap binding edge cases | High | High | Use `@tiptap/extension-collaboration` (wraps y-prosemirror). Extensive fuzz testing with concurrent edit scenarios. Graceful degradation: fall back to locking if CRDT fails. |
 | WebSocket scaling across multiple Cloud Run instances | Medium | High | Redis pub/sub relay from day 1. Test with 2+ instances in staging. Consider Hocuspocus server if custom implementation is too complex. |
 | Data loss on server crash during Yjs flush | Medium | Critical | Flush to Postgres every 60s AND on WebSocket disconnect. Redis persistence (RDB) as additional safety net. Client holds local copy until server ACK. |
 
@@ -857,23 +857,23 @@ Realistically, with a team of 3, some overlap is possible but not all. **Target:
 
 | Role | Primary Responsibilities | Secondary |
 |------|------------------------|-----------|
-| **Frontend Dev (FE)** | React UI, ProseMirror editor, all visual components, CSS/styling | UX decisions, accessibility |
+| **Frontend Dev (FE)** | React UI, TipTap editor, all visual components, CSS/styling | UX decisions, accessibility |
 | **Backend Dev (BE)** | FastAPI APIs, DB schema/migrations, Celery tasks, GCS integration | DevOps, CI/CD, monitoring |
-| **Fullstack Dev (FS)** | Integration layer, editor ↔ API, sync logic, state management, testing | Fills gaps on either side, ProseMirror deep-dive |
+| **Fullstack Dev (FS)** | Integration layer, editor ↔ API, sync logic, state management, testing | Fills gaps on either side, TipTap/ProseMirror deep-dive |
 
 ### Phase-by-Phase Assignments
 
 | Phase | FE Focus | BE Focus | FS Focus |
 |-------|----------|----------|----------|
 | **1a** | React scaffold, auth UI, layout shell | FastAPI scaffold, auth, DB, Docker | Docker Compose, CI/CD, env config, GCS |
-| **1b** | ProseMirror editor UI, binder tree | Manuscript APIs, content save/load, search | Editor ↔ API integration, auto-save, perf |
+| **1b** | TipTap editor UI, binder tree | Manuscript APIs, content save/load, search | Editor ↔ API integration, auto-save, perf |
 | **1c** | Codex UI, kanban board | Codex APIs, image upload, outline APIs | Codex ↔ editor mentions, kanban ↔ binder sync |
 | **1d** | Version history UI, goals dashboard, focus mode | Snapshot engine, delta storage, goals APIs | Auto-snapshot wiring, word count tracking |
 | **1e** | Export dialog, billing page, notifications, polish | Export pipeline, Stripe, notifications service | Template system, cross-browser testing, perf audit |
 | **1f** | Onboarding flow, bug fixes | Security audit, staging deploy, load testing | Integration testing, docs, bug fixes |
 | **2a** | AI sidebar, streaming UI, usage dashboard | AI orchestration, LLM integration, BYOK | Context assembly, editor ↔ AI integration |
 | **2b** | Timeline viz, arc planner, relationship graph | Timeline/arc/relationship APIs, templates | Template → outline generation, data sync |
-| **2c** | Split editor, track changes UI, series UI | Suggestions API, series API, cross-project codex | ProseMirror track changes plugin, split state |
+| **2c** | Split editor, track changes UI, series UI | Suggestions API, series API, cross-project codex | TipTap track changes extension, split state |
 | **2d** | UI adjustments for desktop, offline indicators | Sync protocol server-side, conflict resolution | Tauri setup, SQLite offline storage, sync client |
 | **3a** | Cursor presence, awareness UI | WebSocket server, Yjs provider, Redis pub/sub | y-prosemirror integration, connection management |
 | **3b** | Beta reader portal, publishing UI, feedback dashboard | Beta invite system, feedback APIs, publishing APIs | Email delivery, platform API integration |

@@ -12,6 +12,12 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // usePolling is required for Docker bind mounts on Windows — native FS events
+    // don't propagate from the host into the container, so Vite never sees changes.
+    watch: {
+      usePolling: true,
+      interval: 300,
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

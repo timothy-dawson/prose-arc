@@ -81,3 +81,15 @@ async def test_user(db_session: AsyncSession) -> User:
     db_session.add(user)
     await db_session.flush()
     return user
+
+
+@pytest_asyncio.fixture
+async def auth_headers(async_client: AsyncClient, test_user: User) -> dict[str, str]:
+    """Bearer token headers for the test_user, obtained via the login endpoint."""
+    resp = await async_client.post(
+        "/api/v1/auth/login",
+        json={"email": "test@prosearc.dev", "password": "TestPass123"},
+    )
+    assert resp.status_code == 200, f"Login failed: {resp.text}"
+    token = resp.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}

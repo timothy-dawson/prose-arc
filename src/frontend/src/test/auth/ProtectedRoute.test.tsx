@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 function renderWithRouter(accessToken: string | null) {
-  useAuthStore.setState({ accessToken, refreshToken: null, user: null })
+  useAuthStore.setState({ accessToken, refreshToken: null, user: null, _hasHydrated: true })
 
   return render(
     <MemoryRouter initialEntries={['/dashboard']}>
@@ -21,7 +21,7 @@ function renderWithRouter(accessToken: string | null) {
 
 describe('ProtectedRoute', () => {
   beforeEach(() => {
-    useAuthStore.setState({ accessToken: null, refreshToken: null, user: null })
+    useAuthStore.setState({ accessToken: null, refreshToken: null, user: null, _hasHydrated: false })
   })
 
   it('redirects to /login when not authenticated', () => {
