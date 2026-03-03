@@ -1,8 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useProjects, useCreateProject, useDeleteProject } from '@/hooks/useManuscript'
+import {
+  useProjects,
+  useCreateProject,
+  useDeleteProject,
+  useRestoreProject,
+} from '@/hooks/useManuscript'
 import type { ProjectRead } from '@/api/manuscripts'
+import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
+
+const EXPIRY_DAYS = 30
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString(undefined, {
@@ -12,15 +20,61 @@ function formatDate(dateStr: string): string {
   })
 }
 
+function computeDaysLeft(deletedAt: string): number {
+  return Math.max(
+    0,
+    EXPIRY_DAYS - Math.floor((Date.now() - new Date(deletedAt).getTime()) / 86_400_000),
+  )
+}
+
+function DaysBadge({ days }: { days: number }) {
+  const color =
+    days > 14
+      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+      : days > 7
+      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+      : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+  return (
+    <span className={`inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded ${color}`}>
+      {days}d until deletion
+    </span>
+  )
+}
+
 function ProjectCard({
   project,
   onDelete,
+  onRestore,
 }: {
   project: ProjectRead
   onDelete: (id: string) => void
+  onRestore: (id: string) => void
 }) {
   const navigate = useNavigate()
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const isDeleted = !!project.deleted_at
+  const days = isDeleted ? computeDaysLeft(project.deleted_at!) : null
+
+  if (isDeleted) {
+    return (
+      <div className="relative flex flex-col gap-2 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-5 opacity-70">
+        <div className="text-2xl grayscale">📖</div>
+        <h3 className="font-semibold text-gray-400 dark:text-gray-600 truncate line-through">
+          {project.title}
+        </h3>
+        <div className="text-xs text-gray-400 space-y-0.5">
+          <p>{project.word_count.toLocaleString()} words</p>
+          <p>Deleted {formatDate(project.deleted_at!)}</p>
+        </div>
+        {days !== null && <DaysBadge days={days} />}
+        <button
+          className="mt-1 px-3 py-1.5 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 self-start"
+          onClick={() => onRestore(project.id)}
+        >
+          Restore
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -35,39 +89,16 @@ function ProjectCard({
       </div>
 
       {/* Delete button — visible on hover */}
-      {!confirmDelete ? (
-        <button
-          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity text-sm"
-          title="Delete project"
-          onClick={(e) => {
-            e.stopPropagation()
-            setConfirmDelete(true)
-          }}
-        >
-          ✕
-        </button>
-      ) : (
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/95 dark:bg-gray-900/95 rounded-lg"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Delete "{project.title}"?</p>
-          <div className="flex gap-2">
-            <button
-              className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-              onClick={() => onDelete(project.id)}
-            >
-              Delete
-            </button>
-            <button
-              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
-              onClick={() => setConfirmDelete(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+      <button
+        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity text-sm"
+        title="Delete project"
+        onClick={(e) => {
+          e.stopPropagation()
+          onDelete(project.id)
+        }}
+      >
+        ✕
+      </button>
     </div>
   )
 }
@@ -121,9 +152,14 @@ function NewProjectDialog({ onClose }: { onClose: () => void }) {
 
 export function DashboardPage() {
   const { data: user } = useCurrentUser()
-  const { data: projects = [], isLoading } = useProjects()
+  const [showDeleted, setShowDeleted] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const { data: projects = [], isLoading } = useProjects(showDeleted)
   const deleteProject = useDeleteProject()
+  const restoreProject = useRestoreProject()
   const [showNewDialog, setShowNewDialog] = useState(false)
+
+  const confirmDeleteProject = projects.find((p) => p.id === confirmDeleteId) ?? null
 
   return (
     <div className="p-8">
@@ -136,12 +172,24 @@ export function DashboardPage() {
             </h1>
             <p className="mt-1 text-sm text-gray-500">{user?.email}</p>
           </div>
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-            onClick={() => setShowNewDialog(true)}
-          >
-            + New Project
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowDeleted((v) => !v)}
+              className={`text-xs px-3 py-1.5 rounded border transition-colors ${
+                showDeleted
+                  ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                  : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+              }`}
+            >
+              {showDeleted ? 'Hide deleted' : 'Show deleted'}
+            </button>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              onClick={() => setShowNewDialog(true)}
+            >
+              + New Project
+            </button>
+          </div>
         </div>
 
         {/* Project grid */}
@@ -157,16 +205,22 @@ export function DashboardPage() {
         ) : projects.length === 0 ? (
           <div className="rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700 p-12 text-center">
             <div className="text-4xl">📖</div>
-            <h2 className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">No projects yet</h2>
-            <p className="mt-2 text-sm text-gray-400">
-              Create your first project to get started.
-            </p>
-            <button
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-              onClick={() => setShowNewDialog(true)}
-            >
-              + New Project
-            </button>
+            <h2 className="mt-4 text-lg font-semibold text-gray-700 dark:text-gray-300">
+              {showDeleted ? 'No deleted projects' : 'No projects yet'}
+            </h2>
+            {!showDeleted && (
+              <>
+                <p className="mt-2 text-sm text-gray-400">
+                  Create your first project to get started.
+                </p>
+                <button
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                  onClick={() => setShowNewDialog(true)}
+                >
+                  + New Project
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -174,7 +228,8 @@ export function DashboardPage() {
               <ProjectCard
                 key={project.id}
                 project={project}
-                onDelete={(id) => deleteProject.mutate(id)}
+                onDelete={(id) => setConfirmDeleteId(id)}
+                onRestore={(id) => restoreProject.mutate(id)}
               />
             ))}
           </div>
@@ -182,6 +237,19 @@ export function DashboardPage() {
       </div>
 
       {showNewDialog && <NewProjectDialog onClose={() => setShowNewDialog(false)} />}
+
+      <DeleteConfirmDialog
+        open={!!confirmDeleteId}
+        itemName={confirmDeleteProject?.title ?? ''}
+        itemType="project"
+        expiryDays={EXPIRY_DAYS}
+        onConfirm={() => {
+          if (confirmDeleteId) deleteProject.mutate(confirmDeleteId)
+          setConfirmDeleteId(null)
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+        isPending={deleteProject.isPending}
+      />
     </div>
   )
 }

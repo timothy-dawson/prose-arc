@@ -58,9 +58,13 @@ from app.modules.identity.router import router as identity_router  # noqa: E402
 from app.modules.manuscript.router import router as manuscript_router  # noqa: E402
 from app.modules.codex.router import router as codex_router  # noqa: E402
 from app.modules.plotting.router import router as plotting_router  # noqa: E402
+from app.modules.versioning.router import router as versioning_router  # noqa: E402
+from app.modules.goals.router import router as goals_router  # noqa: E402
 
 app.include_router(health_router)
 app.include_router(identity_router, prefix="/api/v1")
 app.include_router(manuscript_router, prefix="/api/v1")
 app.include_router(codex_router, prefix="/api/v1")
 app.include_router(plotting_router, prefix="/api/v1")
+app.include_router(versioning_router, prefix="/api/v1")
+app.include_router(goals_router, prefix="/api/v1")

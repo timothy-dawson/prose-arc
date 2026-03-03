@@ -11,6 +11,7 @@ import {
   LuList, LuListOrdered, LuQuote,
   LuCode, LuLink, LuUnlink, LuImage,
   LuTable, LuChevronDown, LuSearch, LuAtSign,
+  LuClock, LuEye,
 } from 'react-icons/lu'
 import { useEditorStore } from '@/stores/editorStore'
 import { useCodexEntries } from '@/hooks/useCodex'
@@ -499,8 +500,11 @@ export function EditorToolbar({ editor }: Props) {
   const [textColor,      setTextColor]      = useState('#000000')
   const [showCodexSearch, setShowCodexSearch] = useState(false)
   const [codexRect,       setCodexRect]       = useState<DOMRect | null>(null)
-  const showSearch  = useEditorStore((s) => s.showSearch)
+  const showSearch   = useEditorStore((s) => s.showSearch)
   const toggleSearch = useEditorStore((s) => s.toggleSearch)
+  const activePanel  = useEditorStore((s) => s.activePanel)
+  const setActivePanel = useEditorStore((s) => s.setActivePanel)
+  const setFocusMode = useEditorStore((s) => s.setFocusMode)
 
   // Subscribe to editor state so button active/disabled states update immediately
   // on every transaction (content change or selection change).
@@ -658,6 +662,23 @@ export function EditorToolbar({ editor }: Props) {
           />
         )}
       </div>
+
+      <Divider />
+
+      {/* History panel */}
+      <Btn
+        label={<LuClock size={14} />}
+        title="Version history"
+        active={activePanel === 'history'}
+        onClick={() => setActivePanel(activePanel === 'history' ? 'editor' : 'history')}
+      />
+
+      {/* Focus mode */}
+      <Btn
+        label={<LuEye size={14} />}
+        title="Focus mode (F11)"
+        onClick={() => setFocusMode(true)}
+      />
 
     </div>
   )

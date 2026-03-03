@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved'
 export type SidebarTab = 'binder' | 'codex'
+export type ActivePanel = 'editor' | 'history' | 'goals'
 
 interface EditorState {
   currentProjectId: string | null
@@ -13,6 +14,21 @@ interface EditorState {
   sidebarTab: SidebarTab
   activeCodexEntryId: string | null
   showKanban: boolean
+
+  // Panel routing
+  activePanel: ActivePanel
+  setActivePanel: (panel: ActivePanel) => void
+
+  // Focus mode
+  focusMode: boolean
+  setFocusMode: (val: boolean) => void
+
+  // Session tracking (ephemeral — not persisted)
+  sessionId: string | null
+  sessionStartTime: number | null
+  wordsAtSessionStart: number
+  setSession: (id: string, startTime: number, startWords: number) => void
+  clearSession: () => void
 
   setCurrentProject: (id: string | null) => void
   setCurrentNode: (id: string | null) => void
@@ -36,6 +52,20 @@ export const useEditorStore = create<EditorState>((set) => ({
   activeCodexEntryId: null,
   showKanban: false,
 
+  activePanel: 'editor',
+  setActivePanel: (panel) => set({ activePanel: panel }),
+
+  focusMode: false,
+  setFocusMode: (val) => set({ focusMode: val }),
+
+  sessionId: null,
+  sessionStartTime: null,
+  wordsAtSessionStart: 0,
+  setSession: (id, startTime, startWords) =>
+    set({ sessionId: id, sessionStartTime: startTime, wordsAtSessionStart: startWords }),
+  clearSession: () =>
+    set({ sessionId: null, sessionStartTime: null, wordsAtSessionStart: 0 }),
+
   setCurrentProject: (id) =>
     set({
       currentProjectId: id,
@@ -47,6 +77,11 @@ export const useEditorStore = create<EditorState>((set) => ({
       sidebarTab: 'binder',
       activeCodexEntryId: null,
       showKanban: false,
+      activePanel: 'editor',
+      focusMode: false,
+      sessionId: null,
+      sessionStartTime: null,
+      wordsAtSessionStart: 0,
     }),
   setCurrentNode: (id) =>
     set({ currentNodeId: id, isDirty: false, saveStatus: 'saved', wordCount: 0 }),

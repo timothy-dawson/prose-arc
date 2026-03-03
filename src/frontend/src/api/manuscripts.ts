@@ -14,6 +14,7 @@ export interface ProjectRead {
   settings: Record<string, unknown>
   created_at: string
   updated_at: string
+  deleted_at: string | null
 }
 
 export interface BinderNodeRead {
@@ -29,6 +30,7 @@ export interface BinderNodeRead {
   created_at: string
   updated_at: string
   path: string
+  deleted_at: string | null
 }
 
 export interface BinderTreeResponse {
@@ -59,18 +61,20 @@ export interface SearchResponse {
 // ---------------------------------------------------------------------------
 
 export const projectsApi = {
-  list: () => apiClient.get<ProjectRead[]>('/projects').then((r) => r.data),
+  list: (includeDeleted = false) =>
+    apiClient.get<ProjectRead[]>('/projects', { params: { include_deleted: includeDeleted } }).then((r) => r.data),
   create: (data: { title: string; settings?: Record<string, unknown> }) =>
     apiClient.post<ProjectRead>('/projects', data).then((r) => r.data),
   get: (id: string) => apiClient.get<ProjectRead>(`/projects/${id}`).then((r) => r.data),
   update: (id: string, data: { title?: string; settings?: Record<string, unknown> }) =>
     apiClient.patch<ProjectRead>(`/projects/${id}`, data).then((r) => r.data),
   delete: (id: string) => apiClient.delete(`/projects/${id}`),
+  restore: (id: string) => apiClient.post<ProjectRead>(`/projects/${id}/restore`).then((r) => r.data),
 }
 
 export const binderApi = {
-  getTree: (projectId: string) =>
-    apiClient.get<BinderTreeResponse>(`/projects/${projectId}/binder`).then((r) => r.data),
+  getTree: (projectId: string, includeDeleted = false) =>
+    apiClient.get<BinderTreeResponse>(`/projects/${projectId}/binder`, { params: { include_deleted: includeDeleted } }).then((r) => r.data),
   createNode: (
     projectId: string,
     data: { node_type: NodeType; title: string; parent_id?: string; sort_order?: number },
@@ -88,6 +92,8 @@ export const binderApi = {
       .then((r) => r.data),
   deleteNode: (projectId: string, nodeId: string) =>
     apiClient.delete(`/projects/${projectId}/binder/${nodeId}`),
+  restoreNode: (projectId: string, nodeId: string) =>
+    apiClient.post<BinderNodeRead>(`/projects/${projectId}/binder/${nodeId}/restore`).then((r) => r.data),
   reorder: (
     projectId: string,
     nodes: Array<{ node_id: string; parent_id: string | null; sort_order: number }>,

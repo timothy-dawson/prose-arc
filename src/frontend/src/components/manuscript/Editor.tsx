@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
@@ -29,7 +29,9 @@ import type { BinderNodeRead } from '@/api/manuscripts'
 import { useDocument, useSaveDocument, useUpdateBinderNode } from '@/hooks/useManuscript'
 import { useSyncCodexMentions } from '@/hooks/useCodex'
 import { useEditorStore } from '@/stores/editorStore'
+import { useStartSession, useEndSession } from '@/hooks/useGoals'
 import { CodexMention } from '@/extensions/CodexMentionExtension'
+import { TypewriterScroll } from './extensions/TypewriterScroll'
 import { EditorToolbar } from './EditorToolbar'
 
 interface Props {
@@ -61,7 +63,7 @@ const CustomTableHeader = TableHeader.extend({
   },
 })
 
-const EXTENSIONS = [
+const BASE_EXTENSIONS = [
   StarterKit.configure({ link: { openOnClick: false } }),
   Subscript,
   Superscript,
@@ -215,8 +217,11 @@ function SmDropdown({
   )
 }
 
+const SESSION_INACTIVITY_MS = 15 * 60 * 1000 // 15 minutes
+
 export function Editor({ projectId, nodeId, node }: Props) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editorRef = useRef<TiptapEditor | null>(null)
   const syncMentionsMutateRef = useRef<ReturnType<typeof useSyncCodexMentions>['mutate'] | null>(null)
   const nodeIdRef = useRef(nodeId)
@@ -225,6 +230,23 @@ export function Editor({ projectId, nodeId, node }: Props) {
   const setSaveStatus = useEditorStore((s) => s.setSaveStatus)
   const setWordCount = useEditorStore((s) => s.setWordCount)
   const setActiveCodexEntry = useEditorStore((s) => s.setActiveCodexEntry)
+  const focusMode = useEditorStore((s) => s.focusMode)
+  const sessionId = useEditorStore((s) => s.sessionId)
+  const setSession = useEditorStore((s) => s.setSession)
+  const clearSession = useEditorStore((s) => s.clearSession)
+  const wordCount = useEditorStore((s) => s.wordCount)
+  const sessionIdRef = useRef(sessionId)
+  const wordCountRef = useRef(wordCount)
+  useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
+  useEffect(() => { wordCountRef.current = wordCount }, [wordCount])
+
+  const startSession = useStartSession()
+  const endSession = useEndSession()
+
+  const extensions = useMemo(
+    () => [...BASE_EXTENSIONS, TypewriterScroll.configure({ enabled: focusMode })],
+    [focusMode],
+  )
 
   const { data: docData } = useDocument(projectId, nodeId)
   const { mutateAsync: saveDoc } = useSaveDocument(projectId, nodeId)
@@ -259,13 +281,31 @@ export function Editor({ projectId, nodeId, node }: Props) {
   )
 
   const editor = useEditor({
-    extensions: EXTENSIONS,
+    extensions,
     content: EMPTY_DOC,
     onUpdate: ({ editor: e }) => {
       setWordCount(e.storage.characterCount.words())
       setDirty(true)
       setSaveStatus('unsaved')
       triggerSave(e.getJSON() as Record<string, unknown>)
+
+      // Session tracking: start on first keystroke if no active session
+      if (!sessionIdRef.current) {
+        startSession.mutate(projectId, {
+          onSuccess: (s) => setSession(s.id, Date.now(), wordCountRef.current),
+        })
+      }
+
+      // Reset inactivity timer on every update
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
+      inactivityTimerRef.current = setTimeout(() => {
+        const sid = sessionIdRef.current
+        if (sid) {
+          const wc = wordCountRef.current
+          endSession.mutate({ id: sid, data: { words_written: wc, words_deleted: 0, net_words: wc } })
+          clearSession()
+        }
+      }, SESSION_INACTIVITY_MS)
     },
   })
 
@@ -297,11 +337,19 @@ export function Editor({ projectId, nodeId, node }: Props) {
     return () => editor.view.dom.removeEventListener('click', handleClick)
   }, [editor, setActiveCodexEntry])
 
-  // Clean up autosave timer on unmount
+  // Clean up timers and end active session on unmount
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current)
+      const sid = sessionIdRef.current
+      if (sid) {
+        const wc = wordCountRef.current
+        endSession.mutate({ id: sid, data: { words_written: wc, words_deleted: 0, net_words: wc } })
+        clearSession()
+      }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const [fillColor, setFillColor] = useState('#ffff00')

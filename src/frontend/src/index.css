@@ -134,3 +134,42 @@ body {
   color: #a78bfa; /* violet-400 */
   border-bottom-color: #a78bfa;
 }
+
+/* ─── Focus mode ambient themes ─────────────────────────────────────────── */
+.focus-wrapper {
+  min-height: 100vh;
+  overflow-y: auto;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.focus-minimal {
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+.focus-minimal .ProseMirror {
+  color: #374151;
+}
+
+.focus-dark {
+  background-color: #1a1a1a;
+  color: #e5e5e5;
+}
+.focus-dark .ProseMirror {
+  color: #d1d5db;
+}
+
+.focus-sepia {
+  background-color: #f4ecd8;
+  color: #433422;
+}
+.focus-sepia .ProseMirror {
+  color: #5c4827;
+}
+
+.focus-forest {
+  background-color: #1a2e1a;
+  color: #c8e6c9;
+}
+.focus-forest .ProseMirror {
+  color: #a5d6a7;
+}

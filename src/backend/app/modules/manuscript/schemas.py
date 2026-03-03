@@ -31,6 +31,7 @@ class ProjectRead(BaseModel):
     settings: dict[str, Any]
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None = None
 
 
 class ProjectUpdate(BaseModel):
@@ -64,6 +65,7 @@ class BinderNodeRead(BaseModel):
     word_count: int
     created_at: datetime
     updated_at: datetime
+    deleted_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 

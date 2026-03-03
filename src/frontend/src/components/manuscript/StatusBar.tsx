@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useEditorStore } from '@/stores/editorStore'
 import { useProject } from '@/hooks/useManuscript'
 import type { BinderNodeRead } from '@/api/manuscripts'
@@ -29,13 +30,35 @@ function SaveIndicator({ status }: { status: 'saved' | 'saving' | 'unsaved' }) {
   return <span className="text-gray-400">Saved</span>
 }
 
+function SessionTimer({ startTime }: { startTime: number }) {
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime) / 1000))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [startTime])
+
+  const h = Math.floor(elapsed / 3600)
+  const m = Math.floor((elapsed % 3600) / 60)
+  const s = elapsed % 60
+  const fmt = h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return <span title="Session duration">{fmt}</span>
+}
+
 export function StatusBar({ projectId, nodes }: StatusBarProps) {
   const currentNodeId = useEditorStore((s) => s.currentNodeId)
   const wordCount = useEditorStore((s) => s.wordCount)
   const saveStatus = useEditorStore((s) => s.saveStatus)
+  const sessionStartTime = useEditorStore((s) => s.sessionStartTime)
+  const wordsAtSessionStart = useEditorStore((s) => s.wordsAtSessionStart)
   const { data: project } = useProject(projectId)
 
   const breadcrumb = buildBreadcrumb(nodes, currentNodeId)
+  const wordsThisSession = Math.max(0, wordCount - wordsAtSessionStart)
 
   return (
     <div className="flex items-center justify-between px-4 py-1 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 select-none">
@@ -44,8 +67,17 @@ export function StatusBar({ projectId, nodes }: StatusBarProps) {
         {breadcrumb || '—'}
       </span>
 
-      {/* Right: word counts + save status */}
+      {/* Right: session info + word counts + save status */}
       <div className="flex items-center gap-4 flex-shrink-0">
+        {sessionStartTime !== null && (
+          <>
+            <SessionTimer startTime={sessionStartTime} />
+            <span className="text-green-600 dark:text-green-400">
+              +{wordsThisSession.toLocaleString()} this session
+            </span>
+            <span className="text-gray-200 dark:text-gray-700">·</span>
+          </>
+        )}
         <span>{wordCount.toLocaleString()} words</span>
         {project && (
           <span className="text-gray-400 dark:text-gray-500">

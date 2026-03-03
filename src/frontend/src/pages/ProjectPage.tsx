@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { LuBookOpen, LuBook, LuPenLine, LuLayoutDashboard } from 'react-icons/lu'
+import { LuBookOpen, LuBook, LuPenLine, LuLayoutDashboard, LuClock, LuTarget, LuX } from 'react-icons/lu'
 import { useBinder, useProject } from '@/hooks/useManuscript'
 import { useEditorStore } from '@/stores/editorStore'
+import { useFocusThemeStore, type FocusTheme } from '@/stores/focusThemeStore'
 import { BinderTree } from '@/components/manuscript/BinderTree'
 import { Editor } from '@/components/manuscript/Editor'
 import { FolderView } from '@/components/manuscript/FolderView'
@@ -12,7 +13,46 @@ import { SearchPanel } from '@/components/manuscript/SearchPanel'
 import { KanbanBoard } from '@/components/manuscript/KanbanBoard'
 import { CodexPanel } from '@/components/codex/CodexPanel'
 import { CodexEntryDetail } from '@/components/codex/CodexEntryDetail'
+import { VersionHistoryPanel } from '@/components/manuscript/VersionHistoryPanel'
+import { GoalsPanel } from '@/components/manuscript/GoalsPanel'
 import { UserMenu } from '@/components/layout/TopBar'
+
+const THEME_DOTS: { theme: FocusTheme; bg: string; label: string }[] = [
+  { theme: 'minimal', bg: '#ffffff', label: 'Minimal' },
+  { theme: 'dark',    bg: '#1a1a1a', label: 'Dark' },
+  { theme: 'sepia',   bg: '#f4ecd8', label: 'Sepia' },
+  { theme: 'forest',  bg: '#1a2e1a', label: 'Forest' },
+]
+
+function FocusModeControls({ onExit }: { onExit: () => void }) {
+  const { focusTheme, setFocusTheme } = useFocusThemeStore()
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-black/30 backdrop-blur-sm rounded-full px-4 py-2">
+      {/* Theme dots */}
+      {THEME_DOTS.map(({ theme, bg, label }) => (
+        <button
+          key={theme}
+          title={label}
+          onClick={() => setFocusTheme(theme)}
+          className={`w-4 h-4 rounded-full border-2 transition-transform hover:scale-125 ${
+            focusTheme === theme ? 'border-white scale-125' : 'border-transparent'
+          }`}
+          style={{ backgroundColor: bg }}
+        />
+      ))}
+
+      {/* Exit button */}
+      <button
+        onClick={onExit}
+        title="Exit focus mode (Esc)"
+        className="text-white/70 hover:text-white ml-1"
+      >
+        <LuX size={14} />
+      </button>
+    </div>
+  )
+}
 
 export function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -28,6 +68,11 @@ export function ProjectPage() {
   const activeCodexEntryId = useEditorStore((s) => s.activeCodexEntryId)
   const showKanban = useEditorStore((s) => s.showKanban)
   const toggleKanban = useEditorStore((s) => s.toggleKanban)
+  const activePanel = useEditorStore((s) => s.activePanel)
+  const setActivePanel = useEditorStore((s) => s.setActivePanel)
+  const focusMode = useEditorStore((s) => s.focusMode)
+  const setFocusMode = useEditorStore((s) => s.setFocusMode)
+  const { focusTheme } = useFocusThemeStore()
 
   const { data: project, isLoading: projectLoading } = useProject(projectId ?? null)
   const { data: nodes = [], isLoading: binderLoading } = useBinder(projectId ?? null)
@@ -49,6 +94,21 @@ export function ProjectPage() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
+
+  // F11 to enter focus mode, Escape to exit
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'F11') {
+        e.preventDefault()
+        setFocusMode(true)
+      }
+      if (e.key === 'Escape' && focusMode) {
+        setFocusMode(false)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [focusMode, setFocusMode])
 
   if (!projectId) {
     navigate('/dashboard')
@@ -76,6 +136,25 @@ export function ProjectPage() {
 
   const currentNode = nodes.find((n) => n.id === currentNodeId) ?? null
 
+  // ── Focus mode layout ──────────────────────────────────────────────────────
+  if (focusMode) {
+    return (
+      <div className={`focus-wrapper focus-${focusTheme} flex flex-col`}>
+        <div className="max-w-3xl mx-auto w-full flex-1 py-16 px-8 min-h-screen">
+          {currentNode ? (
+            <Editor projectId={projectId} nodeId={currentNode.id} node={currentNode} />
+          ) : (
+            <div className="flex items-center justify-center h-full text-sm opacity-50">
+              Select a scene in the binder to start writing.
+            </div>
+          )}
+        </div>
+        <FocusModeControls onExit={() => setFocusMode(false)} />
+      </div>
+    )
+  }
+
+  // ── Normal layout ──────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-white dark:bg-gray-900">
       {/* Top bar */}
@@ -93,32 +172,58 @@ export function ProjectPage() {
           <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{project.title}</h1>
         </div>
 
-        {/* Center: view toggle */}
-        <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 gap-0.5">
-          <button
-            onClick={() => showKanban && toggleKanban()}
-            title="Editor view"
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-              !showKanban
-                ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-            }`}
-          >
-            <LuPenLine size={13} />
-            Editor
-          </button>
-          <button
-            onClick={() => !showKanban && toggleKanban()}
-            title="Kanban view"
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-              showKanban
-                ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-            }`}
-          >
-            <LuLayoutDashboard size={13} />
-            Kanban
-          </button>
+        {/* Center: view toggle + panel tabs */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 gap-0.5">
+            <button
+              onClick={() => { if (showKanban) toggleKanban(); setActivePanel('editor') }}
+              title="Editor view"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                !showKanban && activePanel === 'editor'
+                  ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              <LuPenLine size={13} />
+              Editor
+            </button>
+            <button
+              onClick={() => { if (!showKanban) toggleKanban(); setActivePanel('editor') }}
+              title="Kanban view"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                showKanban
+                  ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              <LuLayoutDashboard size={13} />
+              Kanban
+            </button>
+            <button
+              onClick={() => setActivePanel(activePanel === 'history' ? 'editor' : 'history')}
+              title="Version history"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                activePanel === 'history'
+                  ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              <LuClock size={13} />
+              History
+            </button>
+            <button
+              onClick={() => setActivePanel(activePanel === 'goals' ? 'editor' : 'goals')}
+              title="Writing goals"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                activePanel === 'goals'
+                  ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              <LuTarget size={13} />
+              Goals
+            </button>
+          </div>
         </div>
 
         {/* Right: user menu */}
@@ -161,7 +266,7 @@ export function ProjectPage() {
           {sidebarTab === 'binder' ? (
             <>
               <div className="flex-1 overflow-hidden flex flex-col">
-                <BinderTree projectId={projectId} nodes={nodes} />
+                <BinderTree projectId={projectId} />
               </div>
               {showSearch && (
                 <div className="h-64 flex-shrink-0 border-t border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
@@ -180,9 +285,13 @@ export function ProjectPage() {
           )}
         </div>
 
-        {/* Main content: kanban or node-type-aware view */}
+        {/* Main content: panel-aware */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {showKanban ? (
+          {activePanel === 'history' && currentNodeId ? (
+            <VersionHistoryPanel projectId={projectId} nodeId={currentNodeId} />
+          ) : activePanel === 'goals' ? (
+            <GoalsPanel projectId={projectId} />
+          ) : showKanban ? (
             <KanbanBoard projectId={projectId} nodes={nodes} />
           ) : !currentNode ? (
             <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">

@@ -23,6 +23,7 @@ celery_app = Celery(
     backend=settings.celery_result_backend,
     include=[
         "app.tasks.manuscript_tasks",
+        "app.tasks.versioning_tasks",
         # "app.tasks.ai_tasks",
         # "app.tasks.export_tasks",
     ],
