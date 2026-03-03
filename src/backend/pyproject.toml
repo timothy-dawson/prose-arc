@@ -41,6 +41,9 @@ dependencies = [
     # Compression (large document storage)
     "zstandard>=0.23.0",
 
+    # JSON Patch (RFC 6902) for delta-based versioning
+    "jsonpatch>=1.33",
+
     # Logging
     "structlog>=24.4.0",
 

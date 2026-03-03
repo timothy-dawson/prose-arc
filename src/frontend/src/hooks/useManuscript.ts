@@ -14,8 +14,11 @@ import {
 // Projects
 // ---------------------------------------------------------------------------
 
-export function useProjects() {
-  return useQuery({ queryKey: ['projects'], queryFn: projectsApi.list })
+export function useProjects(includeDeleted = false) {
+  return useQuery({
+    queryKey: ['projects', includeDeleted],
+    queryFn: () => projectsApi.list(includeDeleted),
+  })
 }
 
 export function useProject(id: string | null) {
@@ -53,14 +56,22 @@ export function useDeleteProject() {
   })
 }
 
+export function useRestoreProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => projectsApi.restore(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Binder
 // ---------------------------------------------------------------------------
 
-export function useBinder(projectId: string | null) {
+export function useBinder(projectId: string | null, includeDeleted = false) {
   return useQuery({
-    queryKey: ['binder', projectId],
-    queryFn: () => binderApi.getTree(projectId!),
+    queryKey: ['binder', projectId, includeDeleted],
+    queryFn: () => binderApi.getTree(projectId!, includeDeleted),
     enabled: !!projectId,
     select: (data) => data.nodes,
   })
@@ -97,6 +108,14 @@ export function useDeleteBinderNode(projectId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (nodeId: string) => binderApi.deleteNode(projectId, nodeId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['binder', projectId] }),
+  })
+}
+
+export function useRestoreBinderNode(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (nodeId: string) => binderApi.restoreNode(projectId, nodeId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['binder', projectId] }),
   })
 }

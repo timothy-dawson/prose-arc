@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     api_url: str = "http://localhost:8000"
     cors_origins: str = "http://localhost:3000"
 
+    # -------------------------
+    # Soft delete
+    # -------------------------
+    soft_delete_expiry_days: int = 30
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",")]

@@ -50,9 +50,10 @@ async def create_project(
 async def list_projects(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
+    include_deleted: bool = Query(default=False),
 ) -> list[ProjectRead]:
     svc = ManuscriptService(db)
-    projects = await svc.list_projects(current_user.id)
+    projects = await svc.list_projects(current_user.id, include_deleted=include_deleted)
     return [ProjectRead.model_validate(p) for p in projects]
 
 
@@ -91,6 +92,17 @@ async def delete_project(
     await svc.delete_project(project)
 
 
+@router.post("/projects/{project_id}/restore", response_model=ProjectRead)
+async def restore_project(
+    project_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> ProjectRead:
+    svc = ManuscriptService(db)
+    project = await svc.restore_project(project_id, current_user.id)
+    return ProjectRead.model_validate(project)
+
+
 # ---------------------------------------------------------------------------
 # Binder nodes
 # ---------------------------------------------------------------------------
@@ -101,10 +113,11 @@ async def get_binder_tree(
     project_id: uuid.UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
+    include_deleted: bool = Query(default=False),
 ) -> BinderTreeResponse:
     svc = ManuscriptService(db)
     await svc.get_project(project_id, current_user.id)  # ownership check
-    nodes = await svc.get_binder_tree(project_id)
+    nodes = await svc.get_binder_tree(project_id, include_deleted=include_deleted)
     return BinderTreeResponse(nodes=[BinderNodeRead.model_validate(n) for n in nodes])
 
 
@@ -173,6 +186,21 @@ async def delete_binder_node(
     if not node:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Node not found")
     await svc.delete_binder_node(node)
+
+
+@router.post(
+    "/projects/{project_id}/binder/{node_id}/restore", response_model=BinderNodeRead
+)
+async def restore_binder_node(
+    project_id: uuid.UUID,
+    node_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> BinderNodeRead:
+    svc = ManuscriptService(db)
+    await svc.get_project(project_id, current_user.id)  # ownership check
+    node = await svc.restore_binder_node(project_id, node_id)
+    return BinderNodeRead.model_validate(node)
 
 
 @router.post(

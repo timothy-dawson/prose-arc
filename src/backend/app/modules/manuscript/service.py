@@ -10,6 +10,7 @@ Handles:
 
 import json
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 import structlog
@@ -77,10 +78,12 @@ class ManuscriptService:
         logger.info("project_created", project_id=str(project.id), owner_id=str(owner_id))
         return project
 
-    async def list_projects(self, owner_id: uuid.UUID) -> list[Project]:
-        result = await self._db.execute(
-            select(Project).where(Project.owner_id == owner_id).order_by(Project.updated_at.desc())
-        )
+    async def list_projects(self, owner_id: uuid.UUID, include_deleted: bool = False) -> list[Project]:
+        stmt = select(Project).where(Project.owner_id == owner_id)
+        if not include_deleted:
+            stmt = stmt.where(Project.deleted_at.is_(None))
+        stmt = stmt.order_by(Project.updated_at.desc())
+        result = await self._db.execute(stmt)
         return list(result.scalars().all())
 
     async def get_project(self, project_id: uuid.UUID, owner_id: uuid.UUID) -> Project:
@@ -100,9 +103,19 @@ class ManuscriptService:
         return project
 
     async def delete_project(self, project: Project) -> None:
-        await self._db.delete(project)
+        project.deleted_at = datetime.now(timezone.utc)
         await self._db.flush()
-        logger.info("project_deleted", project_id=str(project.id))
+        logger.info("project_soft_deleted", project_id=str(project.id))
+
+    async def restore_project(self, project_id: uuid.UUID, owner_id: uuid.UUID) -> Project:
+        project = await self._db.get(Project, project_id)
+        if not project or project.owner_id != owner_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        project.deleted_at = None
+        await self._db.flush()
+        await self._db.refresh(project)
+        logger.info("project_restored", project_id=str(project_id))
+        return project
 
     # -------------------------------------------------------------------------
     # Binder nodes
@@ -140,12 +153,12 @@ class ManuscriptService:
         logger.info("binder_node_created", node_id=str(node.id), project_id=str(project_id))
         return node
 
-    async def get_binder_tree(self, project_id: uuid.UUID) -> list[BinderNode]:
-        result = await self._db.execute(
-            select(BinderNode)
-            .where(BinderNode.project_id == project_id)
-            .order_by(text("path"), BinderNode.sort_order)
-        )
+    async def get_binder_tree(self, project_id: uuid.UUID, include_deleted: bool = False) -> list[BinderNode]:
+        stmt = select(BinderNode).where(BinderNode.project_id == project_id)
+        if not include_deleted:
+            stmt = stmt.where(BinderNode.deleted_at.is_(None))
+        stmt = stmt.order_by(text("path"), BinderNode.sort_order)
+        result = await self._db.execute(stmt)
         return list(result.scalars().all())
 
     async def update_binder_node(
@@ -168,8 +181,27 @@ class ManuscriptService:
         return node
 
     async def delete_binder_node(self, node: BinderNode) -> None:
-        await self._db.delete(node)
+        now = datetime.now(timezone.utc)
+        # Soft-delete the node and all its descendants via ltree path prefix match
+        await self._db.execute(
+            update(BinderNode)
+            .where(BinderNode.project_id == node.project_id)
+            .where(BinderNode.deleted_at.is_(None))
+            .where(text(f"path <@ '{node.path}'::ltree"))
+            .values(deleted_at=now)
+        )
         await self._db.flush()
+        logger.info("binder_node_soft_deleted", node_id=str(node.id))
+
+    async def restore_binder_node(self, project_id: uuid.UUID, node_id: uuid.UUID) -> BinderNode:
+        node = await self._db.get(BinderNode, node_id)
+        if not node or node.project_id != project_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Node not found")
+        node.deleted_at = None
+        await self._db.flush()
+        await self._db.refresh(node)
+        logger.info("binder_node_restored", node_id=str(node_id))
+        return node
 
     async def bulk_reorder(
         self, project_id: uuid.UUID, data: BinderReorderRequest

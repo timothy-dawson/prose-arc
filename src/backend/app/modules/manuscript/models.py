@@ -56,6 +56,7 @@ class Project(BaseModel):
     series_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
     settings: Mapped[dict] = mapped_column(JSONB, server_default="{}", nullable=False)
     word_count: Mapped[int] = mapped_column(Integer, server_default="0", nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     binder_nodes: Mapped[list["BinderNode"]] = relationship(
         "BinderNode", back_populates="project", lazy="select", cascade="all, delete-orphan"
@@ -82,6 +83,7 @@ class BinderNode(BaseModel):
         "metadata", JSONB, server_default="{}", nullable=False
     )
     word_count: Mapped[int] = mapped_column(Integer, server_default="0", nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     project: Mapped["Project"] = relationship("Project", back_populates="binder_nodes")
     children: Mapped[list["BinderNode"]] = relationship(
