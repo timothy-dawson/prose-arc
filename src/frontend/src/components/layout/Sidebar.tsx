@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom'
+import { LuLayoutDashboard, LuCreditCard } from 'react-icons/lu'
 
 const navItems = [
-  { label: 'Dashboard', to: '/dashboard', icon: '🏠' },
-  // Future phases will add: Projects, Codex, Outline, Timeline, Export
+  { label: 'Dashboard', to: '/dashboard', Icon: LuLayoutDashboard },
+  { label: 'Billing', to: '/billing', Icon: LuCreditCard },
 ]
 
 interface SidebarProps {
@@ -45,7 +46,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               }`
             }
           >
-            <span className="text-base">{item.icon}</span>
+            <item.Icon size={16} />
             {!collapsed && <span>{item.label}</span>}
           </NavLink>
         ))}

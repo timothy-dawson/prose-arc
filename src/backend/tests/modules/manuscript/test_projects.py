@@ -74,13 +74,15 @@ async def test_delete_project(async_client: AsyncClient, auth_headers: dict) -> 
     )
     assert resp.status_code == 204
 
+    # Soft delete — project still accessible but marked deleted
     resp = await async_client.get(
         f"/api/v1/projects/{project_id}", headers=auth_headers
     )
-    assert resp.status_code == 404
+    assert resp.status_code == 200
+    assert resp.json()["deleted_at"] is not None
 
 
 @pytest.mark.asyncio
 async def test_project_requires_auth(async_client: AsyncClient) -> None:
     resp = await async_client.get("/api/v1/projects")
-    assert resp.status_code == 403
+    assert resp.status_code == 401  # unauthenticated → 401 Unauthorized

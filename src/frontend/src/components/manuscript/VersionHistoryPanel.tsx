@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { LuClock, LuPlus, LuRotateCcw, LuTrash2, LuX } from 'react-icons/lu'
+import { Skeleton } from '@/components/common/Skeleton'
 import {
   useCreateSnapshot,
   useDeleteSnapshot,
@@ -182,14 +183,18 @@ export function VersionHistoryPanel({ projectId, nodeId }: VersionHistoryPanelPr
       {/* Snapshot list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-6">Loading…</p>
+          <div className="p-3 space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
         )}
         {!isLoading && snapshots.length === 0 && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-6">
-            No snapshots yet.
-            <br />
-            Save your first snapshot above.
-          </p>
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center gap-2">
+            <LuClock size={28} className="text-gray-300 dark:text-gray-600" />
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No version history yet</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Your version history will appear here.</p>
+          </div>
         )}
         {snapshots.map((snap) => {
           const isSelected = selectedId === snap.id

@@ -68,7 +68,7 @@ async def test_login_unknown_email(async_client: AsyncClient) -> None:
 
 async def test_get_me_requires_auth(async_client: AsyncClient) -> None:
     response = await async_client.get("/api/v1/users/me")
-    assert response.status_code == 403  # HTTPBearer returns 403 when no credentials
+    assert response.status_code == 401  # unauthenticated → 401 Unauthorized
 
 
 async def test_get_me_with_valid_token(async_client: AsyncClient, test_user: User) -> None:

@@ -24,8 +24,8 @@ celery_app = Celery(
     include=[
         "app.tasks.manuscript_tasks",
         "app.tasks.versioning_tasks",
+        "app.tasks.export_tasks",
         # "app.tasks.ai_tasks",
-        # "app.tasks.export_tasks",
     ],
 )
 

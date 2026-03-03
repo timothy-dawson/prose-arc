@@ -13,6 +13,13 @@ from app.core.db import Base  # noqa: F401 — populates Base.metadata
 # Import all model modules so their tables register on Base.metadata
 import app.modules.identity.models  # noqa: F401
 import app.modules.manuscript.models  # noqa: F401
+import app.modules.codex.models  # noqa: F401
+import app.modules.plotting.models  # noqa: F401
+import app.modules.versioning.models  # noqa: F401
+import app.modules.goals.models  # noqa: F401
+import app.modules.export.models  # noqa: F401
+import app.modules.billing.models  # noqa: F401
+import app.modules.notifications.models  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Alembic config object — gives access to values in alembic.ini

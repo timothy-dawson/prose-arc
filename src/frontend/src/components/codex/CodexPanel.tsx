@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { LuPlus, LuSearch, LuUser, LuMapPin, LuSword, LuScroll, LuStar } from 'react-icons/lu'
+import { LuPlus, LuSearch, LuUser, LuMapPin, LuSword, LuScroll, LuStar, LuFeather } from 'react-icons/lu'
 import { useEditorStore } from '@/stores/editorStore'
 import { useCodexEntries, useCreateCodexEntry } from '@/hooks/useCodex'
 import type { EntryType } from '@/api/codex'
+import { Skeleton } from '@/components/common/Skeleton'
 
 const ENTRY_TYPES: { type: EntryType; label: string; icon: React.ReactNode }[] = [
   { type: 'character', label: 'Characters', icon: <LuUser size={14} /> },
@@ -116,14 +117,25 @@ export function CodexPanel({ projectId }: Props) {
       {/* Entry list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="p-4 text-xs text-gray-400 dark:text-gray-500">Loading…</div>
+          <div className="p-3 space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
         ) : entries.length === 0 ? (
-          <div className="p-4 text-xs text-gray-400 dark:text-gray-500 text-center">
-            No {ENTRY_TYPES.find((t) => t.type === activeType)?.label.toLowerCase()} yet.
-            <br />
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center gap-3">
+            <LuFeather size={28} className="text-gray-300 dark:text-gray-600" />
+            <div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Start building your world
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                No {ENTRY_TYPES.find((t) => t.type === activeType)?.label.toLowerCase()} yet.
+              </p>
+            </div>
             <button
               onClick={() => setCreating(true)}
-              className="mt-1 text-blue-500 underline"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
             >
               Add one
             </button>
