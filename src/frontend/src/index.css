@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: 0 0% 100%;
@@ -110,4 +111,26 @@ body {
 
 .tiptap.resize-cursor {
   cursor: col-resize;
+}
+
+/* ─── Codex mention marks ────────────────────────────────────────────────── */
+.codex-mention {
+  color: #7c3aed;
+  border-bottom: 1px dashed #7c3aed;
+  cursor: pointer;
+}
+
+/* ─── Dark mode overrides for hardcoded colors ───────────────────────────── */
+.dark .tiptap table td,
+.dark .tiptap table th {
+  border-color: #374151; /* gray-700 */
+}
+
+.dark .tiptap table th {
+  background-color: #1f2937; /* gray-800 */
+}
+
+.dark .codex-mention {
+  color: #a78bfa; /* violet-400 */
+  border-bottom-color: #a78bfa;
 }

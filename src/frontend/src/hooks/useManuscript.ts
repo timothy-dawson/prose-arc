@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   binderApi,
   type BinderNodeRead,
+  type BinderTreeResponse,
   documentsApi,
   type NodeType,
   projectsApi,
@@ -107,16 +108,19 @@ export function useReorderBinder(projectId: string) {
       binderApi.reorder(projectId, nodes),
     onMutate: async (newOrder) => {
       await qc.cancelQueries({ queryKey: ['binder', projectId] })
-      const previous = qc.getQueryData<BinderNodeRead[]>(['binder', projectId])
-      // Optimistic update: apply new sort_order + parent_id
+      // The cache stores BinderTreeResponse (raw queryFn return), not the select()-transformed array
+      const previous = qc.getQueryData<BinderTreeResponse>(['binder', projectId])
       if (previous) {
-        const updated = previous.map((node) => {
+        const updatedNodes = previous.nodes.map((node) => {
           const item = newOrder.find((o) => o.node_id === node.id)
           return item
             ? { ...node, sort_order: item.sort_order, parent_id: item.parent_id }
             : node
         })
-        qc.setQueryData(['binder', projectId], updated)
+        qc.setQueryData<BinderTreeResponse>(['binder', projectId], {
+          ...previous,
+          nodes: updatedNodes,
+        })
       }
       return { previous }
     },
@@ -147,7 +151,11 @@ export function useSaveDocument(projectId: string, nodeId: string) {
   return useMutation({
     mutationFn: (content: Record<string, unknown>) =>
       documentsApi.save(projectId, nodeId, content),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['document', nodeId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['document', nodeId] })
+      // Refetch binder so word counts in tree/scrivenings/folder/kanban update
+      qc.invalidateQueries({ queryKey: ['binder', projectId] })
+    },
   })
 }
 

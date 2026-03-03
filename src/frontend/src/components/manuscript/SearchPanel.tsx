@@ -51,20 +51,20 @@ export function SearchPanel({ projectId, onClose }: SearchPanelProps) {
   const results = data?.results ?? []
 
   return (
-    <div className="flex flex-col h-full border-t border-gray-200">
+    <div className="flex flex-col h-full border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
       {/* Search input */}
-      <div className="flex items-center gap-2 px-2 py-2 border-b border-gray-200">
-        <span className="text-gray-400 text-sm">🔍</span>
+      <div className="flex items-center gap-2 px-2 py-2 border-b border-gray-200 dark:border-gray-700">
+        <span className="text-gray-400 dark:text-gray-500 text-sm">🔍</span>
         <input
           ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search manuscript…"
-          className="flex-1 text-sm outline-none bg-transparent"
+          className="flex-1 text-sm outline-none bg-transparent text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-600"
         />
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 text-xs"
+          className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-xs"
           title="Close search (Esc)"
         >
           ✕
@@ -74,29 +74,29 @@ export function SearchPanel({ projectId, onClose }: SearchPanelProps) {
       {/* Results */}
       <div className="flex-1 overflow-y-auto">
         {isFetching && debouncedQuery.length > 1 && (
-          <p className="text-xs text-gray-400 text-center py-4">Searching…</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">Searching…</p>
         )}
         {!isFetching && debouncedQuery.length > 1 && results.length === 0 && (
-          <p className="text-xs text-gray-400 text-center py-4">No results</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">No results</p>
         )}
         {results.map((result) => (
           <button
             key={result.node_id}
-            className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+            className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-0"
             onClick={() => {
               setCurrentNode(result.node_id)
               onClose()
             }}
           >
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium truncate">{result.title}</span>
-              <span className="text-xs text-gray-400 flex-shrink-0 bg-gray-100 px-1 rounded">
+              <span className="text-xs font-medium truncate text-gray-800 dark:text-gray-200">{result.title}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 bg-gray-100 dark:bg-gray-700 px-1 rounded">
                 {NODE_TYPE_LABELS[result.node_type]}
               </span>
             </div>
             {result.snippet && (
               <p
-                className="text-xs text-gray-500 line-clamp-2"
+                className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2"
                 dangerouslySetInnerHTML={{ __html: result.snippet }}
               />
             )}
