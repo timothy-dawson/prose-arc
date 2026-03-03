@@ -24,13 +24,18 @@ import {
   RiMergeCellsHorizontal, RiSplitCellsHorizontal,
   RiPaintFill,
 } from 'react-icons/ri'
-import { useDocument, useSaveDocument } from '@/hooks/useManuscript'
+import type { Editor as TiptapEditor } from '@tiptap/core'
+import type { BinderNodeRead } from '@/api/manuscripts'
+import { useDocument, useSaveDocument, useUpdateBinderNode } from '@/hooks/useManuscript'
+import { useSyncCodexMentions } from '@/hooks/useCodex'
 import { useEditorStore } from '@/stores/editorStore'
+import { CodexMention } from '@/extensions/CodexMentionExtension'
 import { EditorToolbar } from './EditorToolbar'
 
 interface Props {
   projectId: string
   nodeId: string
+  node?: BinderNodeRead | null
 }
 
 const EMPTY_DOC = { type: 'doc', content: [{ type: 'paragraph' }] }
@@ -71,7 +76,22 @@ const EXTENSIONS = [
   Highlight.configure({ multicolor: true }),
   Placeholder.configure({ placeholder: 'Start writing…' }),
   CharacterCount,
+  CodexMention,
 ]
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function extractCodexMentions(editor: TiptapEditor): string[] {
+  const ids = new Set<string>()
+  editor.state.doc.descendants((node) => {
+    for (const mark of node.marks) {
+      if (mark.type.name === 'codexMention' && mark.attrs.entryId) {
+        ids.add(mark.attrs.entryId as string)
+      }
+    }
+  })
+  return Array.from(ids)
+}
 
 // ─── Icon size constants ──────────────────────────────────────────────────────
 
@@ -195,15 +215,25 @@ function SmDropdown({
   )
 }
 
-export function Editor({ projectId, nodeId }: Props) {
+export function Editor({ projectId, nodeId, node }: Props) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editorRef = useRef<TiptapEditor | null>(null)
+  const syncMentionsMutateRef = useRef<ReturnType<typeof useSyncCodexMentions>['mutate'] | null>(null)
+  const nodeIdRef = useRef(nodeId)
 
   const setDirty = useEditorStore((s) => s.setDirty)
   const setSaveStatus = useEditorStore((s) => s.setSaveStatus)
   const setWordCount = useEditorStore((s) => s.setWordCount)
+  const setActiveCodexEntry = useEditorStore((s) => s.setActiveCodexEntry)
 
   const { data: docData } = useDocument(projectId, nodeId)
   const { mutateAsync: saveDoc } = useSaveDocument(projectId, nodeId)
+  const updateNode = useUpdateBinderNode(projectId)
+  const syncMentions = useSyncCodexMentions(projectId)
+
+  // keep refs current so triggerSave always uses latest values without stale closures
+  useEffect(() => { nodeIdRef.current = nodeId }, [nodeId])
+  useEffect(() => { syncMentionsMutateRef.current = syncMentions.mutate })
 
   const triggerSave = useCallback(
     (json: Record<string, unknown>) => {
@@ -214,6 +244,12 @@ export function Editor({ projectId, nodeId }: Props) {
           await saveDoc(json)
           setSaveStatus('saved')
           setDirty(false)
+          // sync codex mentions after successful save
+          const ed = editorRef.current
+          if (ed && !ed.isDestroyed && syncMentionsMutateRef.current) {
+            const entryIds = extractCodexMentions(ed)
+            syncMentionsMutateRef.current({ nodeId: nodeIdRef.current, entryIds })
+          }
         } catch {
           setSaveStatus('unsaved')
         }
@@ -244,6 +280,23 @@ export function Editor({ projectId, nodeId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodeId, docData?.binder_node_id])
 
+  // Keep editorRef in sync so triggerSave can access latest editor without dep issues
+  useEffect(() => { editorRef.current = editor }, [editor])
+
+  // Click handler for .codex-mention spans → open codex panel
+  useEffect(() => {
+    if (!editor) return
+    const handleClick = (ev: MouseEvent) => {
+      const target = ev.target as HTMLElement
+      const span = target.closest('.codex-mention') as HTMLElement | null
+      if (span?.dataset.codexEntryId) {
+        setActiveCodexEntry(span.dataset.codexEntryId)
+      }
+    }
+    editor.view.dom.addEventListener('click', handleClick)
+    return () => editor.view.dom.removeEventListener('click', handleClick)
+  }, [editor, setActiveCodexEntry])
+
   // Clean up autosave timer on unmount
   useEffect(() => {
     return () => {
@@ -270,7 +323,27 @@ export function Editor({ projectId, nodeId }: Props) {
     <div className="flex flex-col h-full">
       <EditorToolbar editor={editor} />
 
-      <div className="flex-1 overflow-auto relative">
+      <textarea
+        key={nodeId}
+        placeholder="Scene synopsis…"
+        defaultValue={node?.synopsis ?? ''}
+        onBlur={(e) =>
+          updateNode.mutate({ nodeId, data: { synopsis: e.target.value } })
+        }
+        className="w-full px-4 py-1.5 text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 resize-none outline-none flex-shrink-0"
+        rows={2}
+      />
+
+      <div
+        className="flex-1 overflow-auto relative"
+        onMouseDown={(e) => {
+          // Click in the padding/whitespace area below the document content —
+          // forward focus to the editor so the cursor appears at the end.
+          if (editor && !editor.view.dom.contains(e.target as Node)) {
+            editor.commands.focus('end')
+          }
+        }}
+      >
         {editor && (
           <>
             {/* ── Text selection bubble ── */}
@@ -438,7 +511,7 @@ export function Editor({ projectId, nodeId }: Props) {
 
         <EditorContent
           editor={editor}
-          className="prose prose-gray max-w-none p-8 min-h-full focus-within:outline-none [&_.tiptap]:outline-none"
+          className="prose prose-gray dark:prose-invert max-w-none p-8 min-h-full focus-within:outline-none [&_.tiptap]:outline-none"
         />
       </div>
     </div>

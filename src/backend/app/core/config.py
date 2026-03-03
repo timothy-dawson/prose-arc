@@ -23,18 +23,16 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # -------------------------
-    # Object Storage
+    # Object Storage (Google Cloud Storage)
     # -------------------------
-    storage_backend: Literal["minio", "gcs"] = "minio"
+    storage_backend: Literal["gcs"] = "gcs"
 
-    minio_endpoint: str = "localhost:9000"
-    minio_access_key: str = "minioadmin"
-    minio_secret_key: str = "minioadmin"
-    minio_bucket: str = "prosearc"
-    minio_use_ssl: bool = False
-
-    gcs_bucket: str = "prosearc-prod"
+    gcs_bucket: str = "prosearc"
     gcs_credentials_path: str = ""
+    # Local dev: set to the fake-gcs-server internal URL (e.g. http://fake-gcs:4443)
+    storage_emulator_host: str = ""
+    # Local dev: browser-accessible base URL for object downloads (e.g. http://localhost:4000)
+    gcs_public_host: str = ""
 
     # -------------------------
     # Auth / JWT

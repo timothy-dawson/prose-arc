@@ -10,9 +10,11 @@ import {
   LuAlignLeft, LuAlignCenter, LuAlignRight, LuAlignJustify,
   LuList, LuListOrdered, LuQuote,
   LuCode, LuLink, LuUnlink, LuImage,
-  LuTable, LuChevronDown, LuSearch,
+  LuTable, LuChevronDown, LuSearch, LuAtSign,
 } from 'react-icons/lu'
 import { useEditorStore } from '@/stores/editorStore'
+import { useCodexEntries } from '@/hooks/useCodex'
+import type { CodexEntryRead } from '@/api/codex'
 
 interface Props {
   editor: Editor | null
@@ -21,7 +23,7 @@ interface Props {
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
 function Divider() {
-  return <div className="w-px h-5 bg-gray-300 mx-1 flex-shrink-0" />
+  return <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1 flex-shrink-0" />
 }
 
 function Btn({
@@ -45,10 +47,10 @@ function Btn({
       onMouseDown={(e) => { e.preventDefault(); onClick() }}
       className={`px-2 py-1 text-sm rounded border flex-shrink-0 inline-flex items-center justify-center ${
         active
-          ? 'bg-gray-800 text-white border-gray-800'
+          ? 'bg-gray-800 text-white border-gray-800 dark:bg-gray-200 dark:text-gray-900 dark:border-gray-200'
           : disabled
-            ? 'bg-white text-gray-300 border-gray-200 cursor-not-allowed'
-            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            ? 'bg-white dark:bg-gray-800 text-gray-300 dark:text-gray-600 border-gray-200 dark:border-gray-700 cursor-not-allowed'
+            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
       }`}
     >
       {label}
@@ -129,7 +131,7 @@ function TextStyleMenu({ editor }: { editor: Editor }) {
         type="button"
         title="Text style"
         onMouseDown={toggle}
-        className="px-2 py-1 text-sm rounded border bg-white text-gray-700 border-gray-300 hover:bg-gray-50 inline-flex items-center gap-1.5 min-w-[5.5rem]"
+        className="px-2 py-1 text-sm rounded border bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 inline-flex items-center gap-1.5 min-w-[5.5rem]"
       >
         <span className="flex-1 text-left text-sm">{current.label}</span>
         <LuChevronDown size={12} className="opacity-60 flex-shrink-0" />
@@ -138,14 +140,14 @@ function TextStyleMenu({ editor }: { editor: Editor }) {
         <div
           ref={panelRef}
           style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, zIndex: 9999 }}
-          className="bg-white border border-gray-200 rounded shadow-md py-1 min-w-[10rem]"
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-md py-1 min-w-[10rem]"
         >
           {TEXT_STYLES.map(style => (
             <button
               key={style.label}
               type="button"
               onMouseDown={(ev) => { ev.preventDefault(); style.apply(editor); setOpen(false) }}
-              className={`block w-full px-3 py-1.5 text-left hover:bg-gray-50 ${style.cls} ${style.isActive(editor) ? 'bg-gray-100' : ''}`}
+              className={`block w-full px-3 py-1.5 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 ${style.cls} ${style.isActive(editor) ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
             >
               {style.label}
             </button>
@@ -212,12 +214,12 @@ function FontSizeControl({ editor }: { editor: Editor }) {
   }
 
   return (
-    <div className="flex items-center flex-shrink-0 border border-gray-300 rounded overflow-hidden">
+    <div className="flex items-center flex-shrink-0 border border-gray-300 dark:border-gray-600 rounded overflow-hidden">
       <button
         type="button"
         title="Decrease font size"
         onMouseDown={(e) => { e.preventDefault(); step(-1) }}
-        className="px-1.5 py-1 text-sm bg-white text-gray-600 hover:bg-gray-50 select-none leading-none border-r border-gray-300"
+        className="px-1.5 py-1 text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 select-none leading-none border-r border-gray-300 dark:border-gray-600"
       >
         −
       </button>
@@ -234,13 +236,13 @@ function FontSizeControl({ editor }: { editor: Editor }) {
           if (e.key === 'ArrowUp')   { e.preventDefault(); step(1) }
           if (e.key === 'ArrowDown') { e.preventDefault(); step(-1) }
         }}
-        className="w-9 text-center text-sm text-gray-700 bg-white outline-none py-1"
+        className="w-9 text-center text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 outline-none py-1"
       />
       <button
         type="button"
         title="Increase font size"
         onMouseDown={(e) => { e.preventDefault(); step(1) }}
-        className="px-1.5 py-1 text-sm bg-white text-gray-600 hover:bg-gray-50 select-none leading-none border-l border-gray-300"
+        className="px-1.5 py-1 text-sm bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 select-none leading-none border-l border-gray-300 dark:border-gray-600"
       >
         +
       </button>
@@ -289,7 +291,7 @@ function AlignMenu({ editor }: { editor: Editor }) {
         type="button"
         title="Text alignment"
         onMouseDown={toggle}
-        className="px-2 py-1 text-sm rounded border bg-white text-gray-700 border-gray-300 hover:bg-gray-50 inline-flex items-center gap-0.5"
+        className="px-2 py-1 text-sm rounded border bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 inline-flex items-center gap-0.5"
       >
         {current.icon}
         <LuChevronDown size={12} className="opacity-60 flex-shrink-0 ml-0.5" />
@@ -298,7 +300,7 @@ function AlignMenu({ editor }: { editor: Editor }) {
         <div
           ref={panelRef}
           style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, zIndex: 9999 }}
-          className="bg-white border border-gray-200 rounded shadow-md py-1"
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-md py-1"
         >
           {ALIGNMENTS.map(({ value, icon, label }) => (
             <button
@@ -310,7 +312,7 @@ function AlignMenu({ editor }: { editor: Editor }) {
                 editor.chain().focus().setTextAlign(value).run()
                 setOpen(false)
               }}
-              className={`flex items-center gap-2.5 w-full px-3 py-1.5 text-sm text-left text-gray-700 hover:bg-gray-50 whitespace-nowrap ${editor.isActive({ textAlign: value }) ? 'bg-gray-100' : ''}`}
+              className={`flex items-center gap-2.5 w-full px-3 py-1.5 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap ${editor.isActive({ textAlign: value }) ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
             >
               {icon}
               {label}
@@ -379,7 +381,7 @@ function TableMenu({ editor }: { editor: Editor }) {
         <div
           ref={panelRef}
           style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, zIndex: 9999 }}
-          className="bg-white border border-gray-200 rounded shadow-md p-2.5 select-none"
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-md p-2.5 select-none"
         >
           <div className="flex flex-col gap-1" onMouseLeave={() => setHover(null)}>
             {Array.from({ length: GRID_ROWS }, (_, row) => (
@@ -391,8 +393,8 @@ function TableMenu({ editor }: { editor: Editor }) {
                       key={col}
                       className={`w-5 h-5 border rounded-sm cursor-pointer transition-colors ${
                         isActive
-                          ? 'bg-blue-100 border-blue-400'
-                          : 'bg-white border-gray-300 hover:border-gray-400'
+                          ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400'
+                          : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-400'
                       }`}
                       onMouseEnter={() => setHover({ col, row })}
                       onMouseDown={(ev) => { ev.preventDefault(); insert(col + 1, row + 1) }}
@@ -402,7 +404,7 @@ function TableMenu({ editor }: { editor: Editor }) {
               </div>
             ))}
           </div>
-          <div className="text-center text-xs text-gray-500 mt-2 h-4">
+          <div className="text-center text-xs text-gray-500 dark:text-gray-400 mt-2 h-4">
             {hover ? `${hover.col + 1} × ${hover.row + 1}` : ''}
           </div>
         </div>,
@@ -412,13 +414,91 @@ function TableMenu({ editor }: { editor: Editor }) {
   )
 }
 
+// ─── Codex entry search popup ─────────────────────────────────────────────────
+
+function CodexSearchPopup({
+  editor,
+  triggerRef,
+  rect,
+  onClose,
+}: {
+  editor: Editor
+  triggerRef: React.RefObject<HTMLButtonElement | null>
+  rect: DOMRect
+  onClose: () => void
+}) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  const projectId = useEditorStore((s) => s.currentProjectId)
+  const [search, setSearch] = useState('')
+  const { data: entries = [] } = useCodexEntries(projectId, search ? { search } : undefined)
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (
+        !panelRef.current?.contains(e.target as Node) &&
+        !triggerRef.current?.contains(e.target as Node)
+      ) {
+        onClose()
+      }
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [onClose, triggerRef])
+
+  const applyMention = (entry: CodexEntryRead) => {
+    editor.chain().focus().setMark('codexMention', {
+      entryId: entry.id,
+      entryName: entry.name,
+    }).run()
+    onClose()
+  }
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, zIndex: 9999 }}
+      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg w-64"
+    >
+      <input
+        autoFocus
+        type="text"
+        placeholder="Search codex entries…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full px-3 py-2 text-sm border-b border-gray-200 dark:border-gray-700 outline-none rounded-t-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+      />
+      <div className="max-h-48 overflow-y-auto py-1">
+        {entries.length === 0 ? (
+          <div className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">No entries found</div>
+        ) : (
+          entries.slice(0, 20).map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); applyMention(entry) }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
+            >
+              <span className="text-[10px] text-gray-400 dark:text-gray-500 capitalize w-14 flex-shrink-0">{entry.entry_type}</span>
+              <span className="text-gray-700 truncate">{entry.name}</span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 // ─── Main toolbar ─────────────────────────────────────────────────────────────
 
 export function EditorToolbar({ editor }: Props) {
   const highlightInputRef  = useRef<HTMLInputElement>(null)
   const textColorInputRef  = useRef<HTMLInputElement>(null)
+  const codexBtnRef        = useRef<HTMLButtonElement>(null)
   const [highlightColor, setHighlightColor] = useState('#fef08a')
   const [textColor,      setTextColor]      = useState('#000000')
+  const [showCodexSearch, setShowCodexSearch] = useState(false)
+  const [codexRect,       setCodexRect]       = useState<DOMRect | null>(null)
   const showSearch  = useEditorStore((s) => s.showSearch)
   const toggleSearch = useEditorStore((s) => s.toggleSearch)
 
@@ -447,7 +527,7 @@ export function EditorToolbar({ editor }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-gray-200 bg-gray-50 flex-wrap overflow-x-auto">
+    <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-wrap overflow-x-auto">
 
       {/* History */}
       <Btn label={<LuUndo2 size={14} />} title="Undo (Ctrl+Z)"       disabled={!e.can().undo()} onClick={() => e.chain().focus().undo().run()} />
@@ -475,7 +555,7 @@ export function EditorToolbar({ editor }: Props) {
           type="button"
           title="Highlight color"
           onMouseDown={(ev) => { ev.preventDefault(); highlightInputRef.current?.click() }}
-          className={`px-2 py-1 text-sm rounded border inline-flex flex-col items-center ${e.isActive('highlight') ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+          className={`px-2 py-1 text-sm rounded border inline-flex flex-col items-center ${e.isActive('highlight') ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 border-gray-800 dark:border-gray-200' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
         >
           <LuHighlighter size={14} />
           <div style={{ backgroundColor: highlightColor }} className="w-full h-0.5 rounded-sm mt-0.5" />
@@ -493,7 +573,7 @@ export function EditorToolbar({ editor }: Props) {
           type="button"
           title="Text color"
           onMouseDown={(ev) => { ev.preventDefault(); textColorInputRef.current?.click() }}
-          className="px-2 py-1 text-sm rounded border inline-flex flex-col items-center bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+          className="px-2 py-1 text-sm rounded border inline-flex flex-col items-center bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <LuType size={14} />
           <div style={{ backgroundColor: textColor }} className="w-full h-0.5 rounded-sm mt-0.5" />
@@ -547,6 +627,37 @@ export function EditorToolbar({ editor }: Props) {
         active={showSearch}
         onClick={toggleSearch}
       />
+
+      <Divider />
+
+      {/* Link to Codex */}
+      <div className="relative flex-shrink-0">
+        <button
+          ref={codexBtnRef}
+          type="button"
+          title="Link selection to Codex entry"
+          onMouseDown={(ev) => {
+            ev.preventDefault()
+            if (!showCodexSearch) setCodexRect(codexBtnRef.current?.getBoundingClientRect() ?? null)
+            setShowCodexSearch((o) => !o)
+          }}
+          className={`px-2 py-1 text-sm rounded border inline-flex items-center justify-center ${
+            showCodexSearch
+              ? 'bg-gray-800 text-white border-gray-800'
+              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          <LuAtSign size={14} />
+        </button>
+        {showCodexSearch && codexRect && (
+          <CodexSearchPopup
+            editor={e}
+            triggerRef={codexBtnRef}
+            rect={codexRect}
+            onClose={() => setShowCodexSearch(false)}
+          />
+        )}
+      </div>
 
     </div>
   )

@@ -96,6 +96,7 @@ class ManuscriptService:
         if data.settings is not None:
             project.settings = data.settings
         await self._db.flush()
+        await self._db.refresh(project)
         return project
 
     async def delete_project(self, project: Project) -> None:
@@ -231,6 +232,15 @@ class ManuscriptService:
         merged = await self._db.merge(doc)
         await self._db.flush()
 
+        # Update binder node word count synchronously so the API response
+        # immediately reflects the new count (Celery only handles project total).
+        await self._db.execute(
+            update(BinderNode)
+            .where(BinderNode.id == node_id)
+            .values(word_count=word_count)
+        )
+        await self._db.flush()
+
         # Enqueue async tasks (import here to avoid circular at module level)
         from app.tasks.manuscript_tasks import reindex_search, update_word_counts
 
@@ -331,15 +341,20 @@ class ManuscriptService:
     ) -> None:
         """Update paths of all descendants when a node is moved."""
         # Use raw SQL with ltree subpath replacement
+        # Use CAST(... AS ltree) instead of ::ltree because SQLAlchemy's text()
+        # parameter parser mis-handles :param_name::type (double-colon cast).
         stmt = text(
             """
             UPDATE binder_nodes
-            SET path = :new_prefix || subpath(path, nlevel(:old_prefix))::text
+            SET path = CAST(
+                :new_prefix || '.' || subpath(path, nlevel(CAST(:old_prefix AS ltree)))::text
+                AS ltree
+            )
             WHERE project_id = :project_id
-              AND path <@ :old_prefix::ltree
+              AND path <@ CAST(:old_prefix AS ltree)
               AND id != (
                   SELECT id FROM binder_nodes
-                  WHERE path = :old_prefix::ltree AND project_id = :project_id
+                  WHERE path = CAST(:old_prefix AS ltree) AND project_id = :project_id
                   LIMIT 1
               )
             """

@@ -14,7 +14,7 @@ export function AppShell() {
       />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar />
-        <main className="flex-1 overflow-y-auto bg-white">
+        <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
           <Outlet />
         </main>
       </div>

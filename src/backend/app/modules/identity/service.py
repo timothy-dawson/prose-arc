@@ -178,6 +178,7 @@ class IdentityService:
         if data.avatar_url is not None:
             user.avatar_url = data.avatar_url
         await self._db.flush()
+        await self._db.refresh(user)
         return user
 
     # -------------------------------------------------------------------------

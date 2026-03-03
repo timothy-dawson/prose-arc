@@ -35,8 +35,8 @@ dependencies = [
     "kombu>=5.3.0",
     "redis[asyncio]>=5.0.0",
 
-    # Object storage (MinIO via S3, GCS)
-    "boto3>=1.35.0",
+    # Object storage (Google Cloud Storage)
+    "google-cloud-storage>=2.18.0",
 
     # Compression (large document storage)
     "zstandard>=0.23.0",
@@ -104,7 +104,7 @@ plugins = ["pydantic.mypy"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = [
-    "integration: requires running external services (postgres, redis, minio)",
+    "integration: requires running external services (postgres, redis, gcs)",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",

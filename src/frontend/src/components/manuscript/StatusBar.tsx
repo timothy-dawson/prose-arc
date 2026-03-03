@@ -38,7 +38,7 @@ export function StatusBar({ projectId, nodes }: StatusBarProps) {
   const breadcrumb = buildBreadcrumb(nodes, currentNodeId)
 
   return (
-    <div className="flex items-center justify-between px-4 py-1 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 select-none">
+    <div className="flex items-center justify-between px-4 py-1 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 select-none">
       {/* Left: breadcrumb */}
       <span className="truncate max-w-xs" title={breadcrumb}>
         {breadcrumb || '—'}
@@ -48,7 +48,7 @@ export function StatusBar({ projectId, nodes }: StatusBarProps) {
       <div className="flex items-center gap-4 flex-shrink-0">
         <span>{wordCount.toLocaleString()} words</span>
         {project && (
-          <span className="text-gray-400">
+          <span className="text-gray-400 dark:text-gray-500">
             Project: {project.word_count.toLocaleString()} words
           </span>
         )}
