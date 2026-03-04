@@ -1,4 +1,4 @@
-import apiClient from './client'
+import { apiClient } from './client'
 
 export type ExportFormat = 'docx' | 'pdf' | 'epub'
 export type ExportStatus = 'pending' | 'processing' | 'completed' | 'failed'

@@ -7,6 +7,7 @@ asynchronously so the API call returns immediately with a job ID.
 
 import asyncio
 import json
+import time
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -44,6 +45,7 @@ async def _async_export_document(job_id: str) -> None:
     from app.core.storage import get_storage
     from app.core.events import bus
     from app.modules.export.models import ExportJob, ExportTemplate
+    from app.modules.identity.models import User  # noqa: F401 — registers 'users' table in metadata
     from app.modules.manuscript.models import BinderNode, DocumentContent
     from app.modules.manuscript.models import Project
     from app.modules.export.renderers.base import RendererNode
@@ -56,9 +58,15 @@ async def _async_export_document(job_id: str) -> None:
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     job_uuid = uuid.UUID(job_id)
 
+    t0 = time.monotonic()
+
+    def _elapsed() -> float:
+        return round(time.monotonic() - t0, 3)
+
     try:
         async with session_factory() as session:
             # 1. Load job
+            logger.info("export_step", step="load_job", elapsed=_elapsed(), job_id=job_id)
             job = await session.get(ExportJob, job_uuid)
             if not job:
                 logger.error("export_job_not_found", job_id=job_id)
@@ -66,13 +74,16 @@ async def _async_export_document(job_id: str) -> None:
 
             # Mark processing
             job.status = "processing"
+            logger.info("export_step", step="flush_processing", elapsed=_elapsed())
             await session.flush()
 
             # 2. Load project title
+            logger.info("export_step", step="load_project", elapsed=_elapsed())
             project = await session.get(Project, job.project_id)
             project_title = project.title if project else "Untitled"
 
             # 3. Load all non-deleted binder nodes for this project
+            logger.info("export_step", step="load_nodes", elapsed=_elapsed())
             stmt = (
                 select(BinderNode)
                 .where(
@@ -83,6 +94,7 @@ async def _async_export_document(job_id: str) -> None:
             )
             result = await session.execute(stmt)
             all_nodes = list(result.scalars().all())
+            logger.info("export_step", step="nodes_loaded", elapsed=_elapsed(), count=len(all_nodes))
 
             # Sort into depth-first order
             ordered_nodes = _sort_depth_first(all_nodes)
@@ -96,6 +108,7 @@ async def _async_export_document(job_id: str) -> None:
                 ordered_nodes = [n for n in ordered_nodes if str(n.id) in descendant_ids]
 
             # 5. Load document content for each node
+            logger.info("export_step", step="load_content", elapsed=_elapsed(), node_count=len(ordered_nodes))
             node_ids = [n.id for n in ordered_nodes]
             if node_ids:
                 doc_stmt = select(DocumentContent).where(
@@ -109,7 +122,9 @@ async def _async_export_document(job_id: str) -> None:
                 doc_map = {}
 
             # 6. Build RendererNode list
+            logger.info("export_step", step="compute_depths", elapsed=_elapsed())
             depth_map = _compute_depths(all_nodes)
+            logger.info("export_step", step="depths_done", elapsed=_elapsed())
             renderer_nodes = [
                 RendererNode(
                     id=str(n.id),
@@ -132,6 +147,7 @@ async def _async_export_document(job_id: str) -> None:
                 template_config = _default_config(job.format)
 
             # 8. Select renderer and render
+            logger.info("export_step", step="render_start", elapsed=_elapsed(), format=job.format)
             match job.format:
                 case "docx":
                     renderer = DocxRenderer()
@@ -146,8 +162,10 @@ async def _async_export_document(job_id: str) -> None:
                     raise ValueError(f"Unknown format: {job.format}")
 
             output_bytes = renderer.render(renderer_nodes, template_config, project_title)
+            logger.info("export_step", step="render_done", elapsed=_elapsed(), bytes=len(output_bytes))
 
             # 9. Upload to GCS/MinIO
+            logger.info("export_step", step="upload_start", elapsed=_elapsed())
             storage = get_storage()
             gcs_key = f"exports/{job.project_id}/{job_id}.{ext}"
             content_types = {
@@ -155,7 +173,7 @@ async def _async_export_document(job_id: str) -> None:
                 "pdf": "application/pdf",
                 "epub": "application/epub+zip",
             }
-            storage.upload(
+            await storage.upload(
                 key=gcs_key,
                 data=output_bytes,
                 content_type=content_types[job.format],
@@ -252,7 +270,7 @@ async def _async_cleanup_expired_exports() -> None:
             for job in expired_jobs:
                 try:
                     if job.gcs_key:
-                        storage.delete(job.gcs_key)
+                        await storage.delete(job.gcs_key)
                 except Exception as exc:
                     logger.warning("gcs_delete_failed", gcs_key=job.gcs_key, error=str(exc))
 
@@ -314,7 +332,9 @@ def _compute_depths(all_nodes: list[Any]) -> dict[uuid.UUID, int]:
     for node in all_nodes:
         depth = 0
         current = node.parent_id
-        while current is not None:
+        seen: set[uuid.UUID] = set()
+        while current is not None and current not in seen:
+            seen.add(current)
             depth += 1
             current = id_to_parent.get(current)
         depths[node.id] = depth

@@ -82,7 +82,7 @@ class ExportService:
         export_document.delay(str(job.id))
         logger.info("export_job_created", job_id=str(job.id), format=data.format)
 
-        return self._to_response(job)
+        return await self._to_response(job)
 
     async def get_job(
         self, job_id: uuid.UUID, user_id: uuid.UUID
@@ -90,7 +90,7 @@ class ExportService:
         job = await self._db.get(ExportJob, job_id)
         if not job or job.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export job not found")
-        return self._to_response(job)
+        return await self._to_response(job)
 
     async def list_jobs(
         self,
@@ -108,14 +108,14 @@ class ExportService:
         )
         result = await self._db.execute(stmt)
         jobs = result.scalars().all()
-        return [self._to_response(j) for j in jobs]
+        return [await self._to_response(j) for j in jobs]
 
-    def _to_response(self, job: ExportJob) -> ExportJobResponse:
+    async def _to_response(self, job: ExportJob) -> ExportJobResponse:
         download_url: str | None = None
         if job.status == "completed" and job.gcs_key:
             try:
                 storage = get_storage()
-                download_url = storage.signed_url(job.gcs_key, expiration=_DOWNLOAD_URL_EXPIRY_SECONDS)
+                download_url = await storage.signed_url(job.gcs_key, expires=_DOWNLOAD_URL_EXPIRY_SECONDS)
             except Exception:
                 logger.warning("failed_to_generate_download_url", job_id=str(job.id))
 

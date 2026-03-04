@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ExportCreate, exportApi } from '@/api/export'
+import { type ExportCreate, exportApi } from '@/api/export'
 import type { ExportFormat } from '@/api/export'
 
 export function useExportTemplates(format?: ExportFormat) {

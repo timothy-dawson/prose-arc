@@ -77,9 +77,9 @@ export function ExportDialog({ projectId, nodes, onClose }: ExportDialogProps) {
   const isCompleted = activeJob?.status === 'completed'
   const isFailed = activeJob?.status === 'failed'
 
-  // Chapter/folder nodes for scope selection
+  // Content nodes for scope selection (excludes folders, which are containers with no content)
   const selectableNodes = nodes.filter(
-    (n) => !n.deleted_at && (n.node_type === 'chapter' || n.node_type === 'folder'),
+    (n) => !n.deleted_at && n.node_type !== 'folder',
   )
 
   return (

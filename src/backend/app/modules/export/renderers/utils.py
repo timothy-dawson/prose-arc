@@ -58,9 +58,9 @@ def prosemirror_to_html(node: dict) -> str:
             return "<hr>"
 
         case "image":
-            src = escape(attrs.get("src", ""), quote=True)
-            alt = escape(attrs.get("alt", ""))
-            title = attrs.get("title", "")
+            src = escape(attrs.get("src") or "", quote=True)
+            alt = escape(attrs.get("alt") or "")
+            title = attrs.get("title") or ""
             title_attr = f' title="{escape(title)}"' if title else ""
             return f'<img src="{src}" alt="{alt}"{title_attr}>'
 

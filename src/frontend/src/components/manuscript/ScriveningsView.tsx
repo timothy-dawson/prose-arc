@@ -12,6 +12,7 @@ import Highlight from '@tiptap/extension-highlight'
 import { LuPenLine } from 'react-icons/lu'
 import type { BinderNodeRead } from '@/api/manuscripts'
 import { useDocument, useUpdateBinderNode } from '@/hooks/useManuscript'
+import { CodexMention } from '@/extensions/CodexMentionExtension'
 
 // Same table cell extensions as Editor.tsx for correct rendering of custom table attrs
 const bgAttr = {
@@ -41,6 +42,7 @@ const VIEW_EXTENSIONS = [
   FontSize,
   Color,
   Highlight.configure({ multicolor: true }),
+  CodexMention,
 ]
 
 const EMPTY_DOC = { type: 'doc', content: [{ type: 'paragraph' }] }

@@ -1,4 +1,4 @@
-import apiClient from './client'
+import { apiClient } from './client'
 
 export type PlanName = 'free' | 'core' | 'ai_starter' | 'ai_pro'
 export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'expired'

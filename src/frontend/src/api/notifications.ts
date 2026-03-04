@@ -1,4 +1,4 @@
-import apiClient from './client'
+import { apiClient } from './client'
 
 export type NotificationType = 'export_complete' | 'export_failed' | 'system' | 'billing'
 
