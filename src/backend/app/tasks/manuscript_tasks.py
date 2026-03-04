@@ -1,10 +1,8 @@
 """
 Celery tasks for the manuscript module.
-
-Tasks run in the 'default' queue and use synchronous SQLAlchemy sessions
-(Celery workers are not async).
 """
 
+import asyncio
 import uuid
 
 import structlog
@@ -16,49 +14,52 @@ logger = structlog.get_logger(__name__)
 
 @celery_app.task(queue="default", name="manuscript.update_word_counts")
 def update_word_counts(project_id: str, node_id: str) -> None:
-    """
-    Recount words for the saved node and update aggregate project word count.
+    """Recount words for the saved node and update aggregate project word count."""
+    asyncio.run(_async_update_word_counts(project_id, node_id))
 
-    Uses synchronous SQLAlchemy since Celery workers are not async.
-    """
-    from sqlalchemy import create_engine, func, select, update
-    from sqlalchemy.orm import Session
+
+async def _async_update_word_counts(project_id: str, node_id: str) -> None:
+    from sqlalchemy import func, select, update
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     from app.core.config import get_settings
     from app.modules.manuscript.models import BinderNode, DocumentContent, Project
 
     settings = get_settings()
-    # Convert asyncpg URL to psycopg2 (sync) for Celery tasks
-    sync_url = settings.database_url.replace("+asyncpg", "")
-    engine = create_engine(sync_url)
+    engine = create_async_engine(settings.database_url, echo=False)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     node_uuid = uuid.UUID(node_id)
     project_uuid = uuid.UUID(project_id)
 
-    with Session(engine) as session:
-        doc = session.get(DocumentContent, node_uuid)
-        if not doc or not doc.content_text:
-            return
+    try:
+        async with session_factory() as session:
+            doc = await session.get(DocumentContent, node_uuid)
+            if not doc or not doc.content_text:
+                return
 
-        words = len(doc.content_text.split()) if doc.content_text.strip() else 0
+            words = len(doc.content_text.split()) if doc.content_text.strip() else 0
 
-        session.execute(
-            update(BinderNode).where(BinderNode.id == node_uuid).values(word_count=words)
-        )
-
-        # Aggregate all nodes in project
-        total = session.execute(
-            select(func.coalesce(func.sum(BinderNode.word_count), 0)).where(
-                BinderNode.project_id == project_uuid
+            await session.execute(
+                update(BinderNode).where(BinderNode.id == node_uuid).values(word_count=words)
             )
-        ).scalar_one()
 
-        session.execute(
-            update(Project).where(Project.id == project_uuid).values(word_count=total)
-        )
-        session.commit()
+            total: int = (
+                await session.execute(
+                    select(func.coalesce(func.sum(BinderNode.word_count), 0)).where(
+                        BinderNode.project_id == project_uuid
+                    )
+                )
+            ).scalar_one()
 
-    logger.info("word_counts_updated", node_id=node_id, words=words, project_total=total)
+            await session.execute(
+                update(Project).where(Project.id == project_uuid).values(word_count=total)
+            )
+            await session.commit()
+
+        logger.info("word_counts_updated", node_id=node_id, words=words, project_total=total)
+    finally:
+        await engine.dispose()
 
 
 @celery_app.task(queue="default", name="manuscript.reindex_search")

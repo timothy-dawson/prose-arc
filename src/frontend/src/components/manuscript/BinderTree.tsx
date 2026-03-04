@@ -783,8 +783,8 @@ export function BinderTree({ projectId }: BinderTreeProps) {
 
       <div className="flex-1 overflow-y-auto py-1 bg-white dark:bg-gray-900">
         {nodes.length === 0 ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-6">
-            No chapters yet. Add one above.
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-6 px-3">
+            Add your first chapter above to get started.
           </p>
         ) : (
           <DndContext

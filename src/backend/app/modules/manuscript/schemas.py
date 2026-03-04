@@ -59,6 +59,7 @@ class BinderNodeRead(BaseModel):
     parent_id: uuid.UUID | None
     node_type: NodeType
     title: str
+    path: str
     sort_order: int
     synopsis: str | None
     metadata_: dict[str, Any] = Field(alias="metadata_")

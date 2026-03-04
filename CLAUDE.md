@@ -148,9 +148,9 @@ alembic downgrade -1      # rollback last migration
 
 We're building in 12 phases. See `docs/writing-app-implementation-plan.md` for full details.
 
-**Current phase: 1d — Versioning, Goals & Focus Mode**
+**Current phase: 1f — MVP Hardening & Beta Launch**
 
-**Phase checklist:** `docs/phase-1d-checklist.md` — follow this for all 1d work. Check off tasks as completed.
+**Phase checklist:** `docs/phase-1f-checklist.md` — follow this for all 1f work. Check off tasks as completed.
 
 Phase order:
 1. **1a** (W1-3): Foundation — repo scaffold, Docker, auth, CI

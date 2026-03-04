@@ -4,6 +4,8 @@ import { LuSun, LuMoon } from 'react-icons/lu'
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
 import { queryClient } from '@/lib/queryClient'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
+import { useNotificationStream } from '@/hooks/useNotifications'
 
 export function UserMenu() {
   const navigate = useNavigate()
@@ -87,10 +89,15 @@ export function UserMenu() {
 }
 
 export function TopBar() {
+  useNotificationStream()
+
   return (
     <header className="flex h-14 items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4">
       <div className="flex-1" />
-      <UserMenu />
+      <div className="flex items-center gap-1">
+        <NotificationBell />
+        <UserMenu />
+      </div>
     </header>
   )
 }

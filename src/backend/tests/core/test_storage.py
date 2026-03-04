@@ -1,5 +1,5 @@
 """
-Integration tests for the MinIO storage backend.
+Integration tests for the GCS storage backend (fake-gcs-server in dev).
 
 Marked with @pytest.mark.integration — skipped in CI unless services are available.
 Run locally with: pytest -m integration
@@ -7,12 +7,12 @@ Run locally with: pytest -m integration
 
 import pytest
 
-from app.core.storage import MinIOBackend
+from app.core.storage import GCSBackend
 
 
 @pytest.mark.integration
 async def test_upload_download_round_trip() -> None:
-    storage = MinIOBackend()
+    storage = GCSBackend()
     key = "test/round-trip.txt"
     data = b"Hello from Prose Arc storage test"
 
@@ -25,7 +25,7 @@ async def test_upload_download_round_trip() -> None:
 
 @pytest.mark.integration
 async def test_signed_url_is_string() -> None:
-    storage = MinIOBackend()
+    storage = GCSBackend()
     key = "test/signed-url.txt"
     data = b"signed url test content"
 
@@ -35,4 +35,5 @@ async def test_signed_url_is_string() -> None:
 
     assert isinstance(url, str)
     assert "http" in url
-    assert key in url
+    import urllib.parse
+    assert urllib.parse.quote(key, safe="") in url or key in url

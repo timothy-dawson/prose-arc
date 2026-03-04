@@ -162,4 +162,4 @@ async def test_codex_requires_auth(async_client: AsyncClient, auth_headers: dict
     project_id = proj.json()["id"]
 
     resp = await async_client.get(f"/api/v1/projects/{project_id}/codex")
-    assert resp.status_code == 403
+    assert resp.status_code == 401  # unauthenticated → 401 Unauthorized

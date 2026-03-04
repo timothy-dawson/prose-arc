@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { LuBookOpen, LuBook, LuPenLine, LuLayoutDashboard, LuClock, LuTarget, LuX } from 'react-icons/lu'
+import { LuBookOpen, LuBook, LuPenLine, LuLayoutDashboard, LuClock, LuTarget, LuX, LuDownload } from 'react-icons/lu'
 import { useBinder, useProject } from '@/hooks/useManuscript'
 import { useEditorStore } from '@/stores/editorStore'
 import { useFocusThemeStore, type FocusTheme } from '@/stores/focusThemeStore'
@@ -16,6 +16,8 @@ import { CodexEntryDetail } from '@/components/codex/CodexEntryDetail'
 import { VersionHistoryPanel } from '@/components/manuscript/VersionHistoryPanel'
 import { GoalsPanel } from '@/components/manuscript/GoalsPanel'
 import { UserMenu } from '@/components/layout/TopBar'
+import { ExportDialog } from '@/components/export/ExportDialog'
+import { KeyboardShortcutsPanel } from '@/components/common/KeyboardShortcutsPanel'
 
 const THEME_DOTS: { theme: FocusTheme; bg: string; label: string }[] = [
   { theme: 'minimal', bg: '#ffffff', label: 'Minimal' },
@@ -73,6 +75,8 @@ export function ProjectPage() {
   const focusMode = useEditorStore((s) => s.focusMode)
   const setFocusMode = useEditorStore((s) => s.setFocusMode)
   const { focusTheme } = useFocusThemeStore()
+  const [showExport, setShowExport] = useState(false)
+  const [showShortcuts, setShowShortcuts] = useState(false)
 
   const { data: project, isLoading: projectLoading } = useProject(projectId ?? null)
   const { data: nodes = [], isLoading: binderLoading } = useBinder(projectId ?? null)
@@ -109,6 +113,18 @@ export function ProjectPage() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [focusMode, setFocusMode])
+
+  // ? key to open keyboard shortcuts panel (when not in editor/input)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      if (e.key === '?' && tag !== 'INPUT' && tag !== 'TEXTAREA' && !(e.target as HTMLElement).isContentEditable) {
+        setShowShortcuts(true)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   if (!projectId) {
     navigate('/dashboard')
@@ -226,11 +242,31 @@ export function ProjectPage() {
           </div>
         </div>
 
-        {/* Right: user menu */}
-        <div className="flex-1 flex justify-end">
+        {/* Right: export + user menu */}
+        <div className="flex-1 flex justify-end items-center gap-2">
+          <button
+            onClick={() => setShowExport(true)}
+            title="Export manuscript"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <LuDownload size={13} />
+            Export
+          </button>
           <UserMenu />
         </div>
       </div>
+
+      {showExport && (
+        <ExportDialog
+          projectId={projectId}
+          nodes={nodes}
+          onClose={() => setShowExport(false)}
+        />
+      )}
+
+      {showShortcuts && (
+        <KeyboardShortcutsPanel onClose={() => setShowShortcuts(false)} />
+      )}
 
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
