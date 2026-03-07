@@ -2,11 +2,12 @@
 Manuscript module Pydantic schemas — request/response models.
 """
 
+import json
 import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.modules.manuscript.models import NodeType
 
@@ -17,7 +18,7 @@ from app.modules.manuscript.models import NodeType
 
 
 class ProjectCreate(BaseModel):
-    title: str = Field(min_length=1, max_length=500)
+    title: str = Field(min_length=1, max_length=255)
     settings: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -35,7 +36,7 @@ class ProjectRead(BaseModel):
 
 
 class ProjectUpdate(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=500)
+    title: str | None = Field(default=None, min_length=1, max_length=255)
     settings: dict[str, Any] | None = None
 
 
@@ -73,7 +74,7 @@ class BinderNodeRead(BaseModel):
 
 class BinderNodeUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=500)
-    synopsis: str | None = None
+    synopsis: str | None = Field(default=None, max_length=10_240)
     metadata_: dict[str, Any] | None = Field(default=None, alias="metadata")
     parent_id: uuid.UUID | None = None
     sort_order: int | None = None
@@ -100,9 +101,19 @@ class BinderTreeResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+_MAX_DOCUMENT_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
 class DocumentSave(BaseModel):
     content: dict[str, Any]  # ProseMirror document JSON
     byte_size: int = Field(ge=0)
+
+    @field_validator("content")
+    @classmethod
+    def content_size_limit(cls, v: dict[str, Any]) -> dict[str, Any]:
+        if len(json.dumps(v)) > _MAX_DOCUMENT_BYTES:
+            raise ValueError("Document content exceeds the 5 MB limit")
+        return v
 
 
 class DocumentRead(BaseModel):

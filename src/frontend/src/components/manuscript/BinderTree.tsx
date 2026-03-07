@@ -746,7 +746,7 @@ export function BinderTree({ projectId }: BinderTreeProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" data-tour="binder">
         <button
           onClick={() => handleSmartAdd('folder')}
           className="flex-1 flex items-center justify-center py-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-yellow-500 dark:text-yellow-400"

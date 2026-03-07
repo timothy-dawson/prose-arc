@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { LuBookOpen, LuBook, LuPenLine, LuLayoutDashboard, LuClock, LuTarget, LuX, LuDownload } from 'react-icons/lu'
+import { LuBookOpen, LuBook, LuPenLine, LuLayoutDashboard, LuClock, LuTarget, LuX, LuDownload, LuMaximize } from 'react-icons/lu'
 import { useBinder, useProject } from '@/hooks/useManuscript'
 import { useEditorStore } from '@/stores/editorStore'
 import { useFocusThemeStore, type FocusTheme } from '@/stores/focusThemeStore'
@@ -18,6 +18,7 @@ import { GoalsPanel } from '@/components/manuscript/GoalsPanel'
 import { UserMenu } from '@/components/layout/TopBar'
 import { ExportDialog } from '@/components/export/ExportDialog'
 import { KeyboardShortcutsPanel } from '@/components/common/KeyboardShortcutsPanel'
+import { FeatureTour } from '@/components/onboarding/FeatureTour'
 
 const THEME_DOTS: { theme: FocusTheme; bg: string; label: string }[] = [
   { theme: 'minimal', bg: '#ffffff', label: 'Minimal' },
@@ -194,6 +195,7 @@ export function ProjectPage() {
             <button
               onClick={() => { if (showKanban) toggleKanban(); setActivePanel('editor') }}
               title="Editor view"
+              data-tour="editor"
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
                 !showKanban && activePanel === 'editor'
                   ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
@@ -206,6 +208,7 @@ export function ProjectPage() {
             <button
               onClick={() => { if (!showKanban) toggleKanban(); setActivePanel('editor') }}
               title="Kanban view"
+              data-tour="kanban"
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
                 showKanban
                   ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
@@ -218,6 +221,7 @@ export function ProjectPage() {
             <button
               onClick={() => setActivePanel(activePanel === 'history' ? 'editor' : 'history')}
               title="Version history"
+              data-tour="version-history"
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
                 activePanel === 'history'
                   ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
@@ -230,6 +234,7 @@ export function ProjectPage() {
             <button
               onClick={() => setActivePanel(activePanel === 'goals' ? 'editor' : 'goals')}
               title="Writing goals"
+              data-tour="goals"
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${
                 activePanel === 'goals'
                   ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-gray-100 shadow-sm'
@@ -245,8 +250,18 @@ export function ProjectPage() {
         {/* Right: export + user menu */}
         <div className="flex-1 flex justify-end items-center gap-2">
           <button
+            onClick={() => setFocusMode(true)}
+            title="Focus mode (F11)"
+            data-tour="focus-mode"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <LuMaximize size={13} />
+            Focus
+          </button>
+          <button
             onClick={() => setShowExport(true)}
             title="Export manuscript"
+            data-tour="export"
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
           >
             <LuDownload size={13} />
@@ -268,6 +283,8 @@ export function ProjectPage() {
         <KeyboardShortcutsPanel onClose={() => setShowShortcuts(false)} />
       )}
 
+      <FeatureTour />
+
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left sidebar */}
@@ -287,6 +304,7 @@ export function ProjectPage() {
             </button>
             <button
               onClick={() => setSidebarTab('codex')}
+              data-tour="codex"
               className={`flex-1 py-2 text-xs font-medium flex flex-col items-center gap-0.5 border-b-2 transition-colors ${
                 sidebarTab === 'codex'
                   ? 'border-blue-600 text-blue-600 dark:text-blue-400'

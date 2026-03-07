@@ -1,7 +1,8 @@
 import enum
 import uuid
+from datetime import datetime
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -65,3 +66,24 @@ class TeamMember(BaseModel):
     # Relationships
     team: Mapped["Team"] = relationship("Team", back_populates="members", lazy="select")
     user: Mapped["User"] = relationship("User", back_populates="team_memberships", lazy="select")
+
+
+class InviteCode(BaseModel):
+    __tablename__ = "invite_codes"
+
+    code: Mapped[str] = mapped_column(String(16), unique=True, nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    used_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Feedback(BaseModel):
+    __tablename__ = "feedback"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    category: Mapped[str] = mapped_column(String(32), nullable=False)  # bug | feature | general
+    message: Mapped[str] = mapped_column(Text, nullable=False)

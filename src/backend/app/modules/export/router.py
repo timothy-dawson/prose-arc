@@ -3,11 +3,12 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import get_current_user
 from app.core.db import get_db
+from app.core.limiter import get_user_id_from_request, limiter
 from app.modules.export.schemas import ExportCreate, ExportJobResponse, ExportTemplateResponse
 from app.modules.export.service import ExportService
 from app.modules.identity.models import User
@@ -27,7 +28,9 @@ async def list_templates(
 
 
 @router.post("/projects/{project_id}/export", response_model=ExportJobResponse, status_code=202)
+@limiter.limit("10/hour", key_func=get_user_id_from_request)
 async def create_export_job(
+    request: Request,
     project_id: uuid.UUID,
     data: ExportCreate,
     db: AsyncSession = Depends(get_db),

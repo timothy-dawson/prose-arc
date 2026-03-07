@@ -5,12 +5,12 @@ Versioning module Pydantic schemas.
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SnapshotCreate(BaseModel):
     binder_node_id: uuid.UUID | None = None
-    name: str | None = None
+    name: str | None = Field(default=None, max_length=255)
 
 
 class SnapshotRead(BaseModel):

@@ -38,6 +38,7 @@ class TokenPayload(BaseModel):
     sub: str  # user UUID as string
     type: str  # "access" or "refresh"
     exp: datetime
+    jti: str | None = None  # unique token ID — present on refresh tokens for rotation
 
 
 def create_access_token(user_id: uuid.UUID) -> str:
@@ -48,7 +49,8 @@ def create_access_token(user_id: uuid.UUID) -> str:
 
 def create_refresh_token(user_id: uuid.UUID) -> str:
     expire = datetime.now(UTC) + timedelta(days=settings.jwt_refresh_token_expire_days)
-    payload = {"sub": str(user_id), "type": "refresh", "exp": expire}
+    jti = str(uuid.uuid4())
+    payload = {"sub": str(user_id), "type": "refresh", "exp": expire, "jti": jti}
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
 
 

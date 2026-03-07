@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class CodexEntryCreate(BaseModel):
     entry_type: str = Field(pattern=r"^(character|location|item|lore|custom)$")
     name: str = Field(min_length=1, max_length=500)
-    summary: str | None = None
+    summary: str | None = Field(default=None, max_length=10_000)
     content: dict[str, Any] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
     image_url: str | None = None
@@ -18,7 +18,7 @@ class CodexEntryCreate(BaseModel):
 
 class CodexEntryUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=500)
-    summary: str | None = None
+    summary: str | None = Field(default=None, max_length=10_000)
     content: dict[str, Any] | None = None
     tags: list[str] | None = None
     image_url: str | None = None

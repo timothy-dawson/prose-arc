@@ -37,6 +37,14 @@ export function useCreateProject() {
   })
 }
 
+export function useCreateSampleProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => projectsApi.createSample(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
 export function useUpdateProject(id: string) {
   const qc = useQueryClient()
   return useMutation({
