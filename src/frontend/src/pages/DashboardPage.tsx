@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -9,6 +9,9 @@ import {
 } from '@/hooks/useManuscript'
 import type { ProjectRead } from '@/api/manuscripts'
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
+
+const ONBOARDING_KEY = 'prose-arc-onboarding'
 
 const EXPIRY_DAYS = 30
 
@@ -158,6 +161,15 @@ export function DashboardPage() {
   const deleteProject = useDeleteProject()
   const restoreProject = useRestoreProject()
   const [showNewDialog, setShowNewDialog] = useState(false)
+  const [showWizard, setShowWizard] = useState(false)
+
+  useEffect(() => {
+    if (!isLoading && projects.length === 0 && !showDeleted) {
+      if (!localStorage.getItem(ONBOARDING_KEY)) {
+        setShowWizard(true)
+      }
+    }
+  }, [isLoading, projects.length, showDeleted])
 
   const confirmDeleteProject = projects.find((p) => p.id === confirmDeleteId) ?? null
 
@@ -237,6 +249,8 @@ export function DashboardPage() {
       </div>
 
       {showNewDialog && <NewProjectDialog onClose={() => setShowNewDialog(false)} />}
+
+      <OnboardingWizard open={showWizard} onClose={() => setShowWizard(false)} />
 
       <DeleteConfirmDialog
         open={!!confirmDeleteId}

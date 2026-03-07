@@ -1,17 +1,20 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { LuSun, LuMoon } from 'react-icons/lu'
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
+import { REPLAY_TOUR_EVENT, TOUR_COMPLETE_KEY, TOUR_PENDING_KEY } from '@/components/onboarding/FeatureTour'
 import { queryClient } from '@/lib/queryClient'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { useNotificationStream } from '@/hooks/useNotifications'
 
 export function UserMenu() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, clearAuth } = useAuthStore()
   const { isDark, toggleTheme } = useThemeStore()
   const [menuOpen, setMenuOpen] = useState(false)
+  const isProjectPage = location.pathname.startsWith('/projects/')
 
   const handleLogout = () => {
     clearAuth()
@@ -70,10 +73,23 @@ export function UserMenu() {
               onClick={() => setMenuOpen(false)}
               aria-hidden="true"
             />
-            <div className="absolute right-0 z-20 mt-1 w-44 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg">
+            <div className="absolute right-0 z-20 mt-1 w-48 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg">
               <div className="border-b border-gray-100 dark:border-gray-700 px-3 py-2">
                 <p className="truncate text-xs font-medium text-gray-900 dark:text-gray-100">{user?.email}</p>
               </div>
+              {isProjectPage && (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false)
+                    localStorage.setItem(TOUR_PENDING_KEY, 'true')
+                    localStorage.removeItem(TOUR_COMPLETE_KEY)
+                    window.dispatchEvent(new Event(REPLAY_TOUR_EVENT))
+                  }}
+                  className="flex w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Replay tour
+                </button>
+              )}
               <button
                 onClick={handleLogout}
                 className="flex w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"

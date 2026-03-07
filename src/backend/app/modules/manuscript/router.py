@@ -35,6 +35,16 @@ router = APIRouter(tags=["manuscript"])
 # ---------------------------------------------------------------------------
 
 
+@router.post("/projects/sample", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
+async def create_sample_project(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> ProjectRead:
+    svc = ManuscriptService(db)
+    project = await svc.create_sample_project(current_user.id)
+    return ProjectRead.model_validate(project)
+
+
 @router.post("/projects", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
 async def create_project(
     data: ProjectCreate,

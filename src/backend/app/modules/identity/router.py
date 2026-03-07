@@ -4,20 +4,30 @@ Identity router — auth and user profile endpoints.
 All routes are prefixed with /api/v1 in main.py.
 """
 
+import uuid
 from typing import Annotated
 
 import structlog
 from authlib.integrations.starlette_client import OAuth
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.config import Config as StarletteConfig
 
-from app.core.auth import create_access_token, create_refresh_token, get_current_user
+from app.core.auth import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    get_current_user,
+)
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.modules.identity.models import User
+from app.core.limiter import limiter
+from app.core.redis_client import RedisDep, is_token_revoked, revoke_token
+from app.modules.identity.models import Feedback, User
 from app.modules.identity.schemas import (
+    FeedbackCreate,
+    FeedbackResponse,
     LoginRequest,
     TokenRefreshRequest,
     TokenResponse,
@@ -51,7 +61,9 @@ oauth.register(
 # ---------------------------------------------------------------------------
 
 @router.post("/auth/register", response_model=UserRead, status_code=201)
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     data: UserCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
@@ -60,7 +72,9 @@ async def register(
 
 
 @router.post("/auth/login", response_model=TokenResponse)
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     data: LoginRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenResponse:
@@ -69,12 +83,44 @@ async def login(
 
 
 @router.post("/auth/refresh", response_model=TokenResponse)
+@limiter.limit("5/minute")
 async def refresh_tokens(
+    request: Request,
     data: TokenRefreshRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
+    redis: RedisDep,
 ) -> TokenResponse:
-    service = IdentityService(db)
-    return await service.refresh_tokens(data.refresh_token)
+    payload = decode_token(data.refresh_token)
+
+    if payload.type != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type — expected refresh token",
+        )
+
+    # Reject replayed tokens
+    if payload.jti and await is_token_revoked(payload.jti, redis):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has already been used",
+        )
+
+    # Rotate: revoke the current JTI before issuing new tokens
+    if payload.jti:
+        ttl = settings.jwt_refresh_token_expire_days * 86_400
+        await revoke_token(payload.jti, redis, ttl)
+
+    user = await db.get(User, uuid.UUID(payload.sub))
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+        )
+
+    return TokenResponse(
+        access_token=create_access_token(user.id),
+        refresh_token=create_refresh_token(user.id),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -133,3 +179,17 @@ async def update_me(
 ) -> User:
     service = IdentityService(db)
     return await service.update_user(current_user, data)
+
+
+# ---------------------------------------------------------------------------
+# Feedback
+# ---------------------------------------------------------------------------
+
+@router.post("/feedback", response_model=FeedbackResponse, status_code=201)
+async def submit_feedback(
+    data: FeedbackCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Feedback:
+    service = IdentityService(db)
+    return await service.submit_feedback(current_user.id, data)

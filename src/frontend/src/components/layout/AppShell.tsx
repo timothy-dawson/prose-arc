@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
+import { FeedbackWidget } from '@/components/feedback/FeedbackWidget'
 
 export function AppShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -18,6 +19,7 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+      <FeedbackWidget />
     </div>
   )
 }

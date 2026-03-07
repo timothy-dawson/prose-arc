@@ -66,6 +66,16 @@ class Settings(BaseSettings):
     # -------------------------
     soft_delete_expiry_days: int = 30
 
+    # -------------------------
+    # Error tracking
+    # -------------------------
+    sentry_dsn: str = ""
+
+    # -------------------------
+    # Beta / invite gate
+    # -------------------------
+    registration_requires_invite: bool = False
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",")]

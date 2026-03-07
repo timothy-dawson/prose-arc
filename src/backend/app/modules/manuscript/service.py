@@ -346,6 +346,138 @@ class ManuscriptService:
         ]
 
     # -------------------------------------------------------------------------
+    # Sample project
+    # -------------------------------------------------------------------------
+
+    async def create_sample_project(self, owner_id: uuid.UUID) -> Project:
+        """Create a demo project with pre-filled content for new users."""
+        from app.modules.codex.models import CodexEntry
+
+        project = Project(
+            owner_id=owner_id,
+            title="My First Novel",
+            settings={},
+        )
+        self._db.add(project)
+        await self._db.flush()
+
+        # Binder structure: Act One (folder) → Chapter One → The Beginning (scene)
+        #                                     → Chapter Two
+        act_one = BinderNode(
+            project_id=project.id,
+            parent_id=None,
+            node_type="folder",
+            title="Act One",
+            sort_order=0,
+            path="placeholder",
+        )
+        self._db.add(act_one)
+        await self._db.flush()
+        act_one.path = _node_label(act_one.id)
+        await self._db.flush()
+
+        ch_one = BinderNode(
+            project_id=project.id,
+            parent_id=act_one.id,
+            node_type="chapter",
+            title="Chapter One",
+            sort_order=0,
+            path="placeholder",
+        )
+        self._db.add(ch_one)
+        await self._db.flush()
+        ch_one.path = f"{act_one.path}.{_node_label(ch_one.id)}"
+        await self._db.flush()
+
+        scene = BinderNode(
+            project_id=project.id,
+            parent_id=ch_one.id,
+            node_type="scene",
+            title="The Beginning",
+            sort_order=0,
+            path="placeholder",
+        )
+        self._db.add(scene)
+        await self._db.flush()
+        scene.path = f"{ch_one.path}.{_node_label(scene.id)}"
+        await self._db.flush()
+
+        ch_two = BinderNode(
+            project_id=project.id,
+            parent_id=act_one.id,
+            node_type="chapter",
+            title="Chapter Two",
+            sort_order=1,
+            path="placeholder",
+        )
+        self._db.add(ch_two)
+        await self._db.flush()
+        ch_two.path = f"{act_one.path}.{_node_label(ch_two.id)}"
+        await self._db.flush()
+
+        # Sample prose for The Beginning
+        sample_text = (
+            "The morning light filtered through the curtains, casting long golden stripes "
+            "across the worn floorboards. Elara sat at the edge of her bed, listening to "
+            "the distant sound of the harbour bells — three long tolls, then silence.\n\n"
+            "She had not slept. The letter from the Cartographers' Guild lay open on the "
+            "writing desk, its wax seal broken, its words still burning in her mind: "
+            "\"You have been chosen.\"\n\n"
+            "Chosen for what, exactly, she did not yet know. The letter was careful to be "
+            "vague — a talent, she supposed, of people who dealt in maps. They described "
+            "borders and coastlines in exquisite detail but left the territories between "
+            "them deliberately blank.\n\n"
+            "She stood, crossed to the window, and pressed her palm against the cold glass. "
+            "The city of Velmoor spread out below: crooked chimneys breathing pale smoke, "
+            "the canal district glittering in the early light, the great brass dome of the "
+            "Observatorium catching the first real rays of sun.\n\n"
+            "She had exactly one hour before the Guild's courier returned for her answer."
+        )
+        sample_pm: dict[str, Any] = {
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": para.strip()}],
+                }
+                for para in sample_text.split("\n\n")
+                if para.strip()
+            ],
+        }
+        content_bytes = json.dumps(sample_pm).encode("utf-8")
+        doc = DocumentContent(
+            binder_node_id=scene.id,
+            content_prosemirror=sample_pm,
+            content_text=sample_text,
+            byte_size=len(content_bytes),
+        )
+        self._db.add(doc)
+
+        # Codex entries
+        character = CodexEntry(
+            project_id=project.id,
+            entry_type="character",
+            name="Elara",
+            summary="A young cartographer's apprentice who receives a mysterious summons.",
+            content={},
+            tags=["protagonist"],
+        )
+        location = CodexEntry(
+            project_id=project.id,
+            entry_type="location",
+            name="Velmoor",
+            summary="A coastal city famous for its Cartographers' Guild and the great Observatorium.",
+            content={},
+            tags=["city", "setting"],
+        )
+        self._db.add(character)
+        self._db.add(location)
+        await self._db.flush()
+
+        logger.info("sample_project_created", project_id=str(project.id), owner_id=str(owner_id))
+        return project
+
+    # -------------------------------------------------------------------------
     # Private helpers
     # -------------------------------------------------------------------------
 

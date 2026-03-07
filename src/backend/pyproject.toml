@@ -58,6 +58,13 @@ dependencies = [
 
     # Billing
     "stripe>=10.0.0",            # Stripe SDK (calls stubbed in dev)
+
+    # Security / rate limiting
+    "slowapi>=0.1.9",            # FastAPI rate limiting (wraps limits)
+    "limits>=3.13.0",            # Rate limit storage backends (Redis)
+
+    # Error tracking
+    "sentry-sdk[fastapi]>=2.0.0",
 ]
 
 [project.optional-dependencies]

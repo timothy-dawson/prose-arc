@@ -65,6 +65,8 @@ export const projectsApi = {
     apiClient.get<ProjectRead[]>('/projects', { params: { include_deleted: includeDeleted } }).then((r) => r.data),
   create: (data: { title: string; settings?: Record<string, unknown> }) =>
     apiClient.post<ProjectRead>('/projects', data).then((r) => r.data),
+  createSample: () =>
+    apiClient.post<ProjectRead>('/projects/sample').then((r) => r.data),
   get: (id: string) => apiClient.get<ProjectRead>(`/projects/${id}`).then((r) => r.data),
   update: (id: string, data: { title?: string; settings?: Record<string, unknown> }) =>
     apiClient.patch<ProjectRead>(`/projects/${id}`, data).then((r) => r.data),

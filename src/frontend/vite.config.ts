@@ -10,6 +10,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'editor-vendor': ['@tiptap/react', '@tiptap/starter-kit'],
+          'query-vendor': ['@tanstack/react-query'],
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     // usePolling is required for Docker bind mounts on Windows — native FS events

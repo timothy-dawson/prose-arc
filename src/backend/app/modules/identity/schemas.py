@@ -8,6 +8,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     display_name: str | None = Field(default=None, max_length=255)
+    invite_code: str | None = None
 
     @field_validator("password")
     @classmethod
@@ -53,3 +54,17 @@ class UserIdPayload(BaseModel):
     """Internal event payload for user-related domain events."""
     user_id: uuid.UUID
     email: str
+
+
+class FeedbackCreate(BaseModel):
+    category: str = Field(pattern=r"^(bug|feature|general)$")
+    message: str = Field(min_length=10, max_length=5_000)
+
+
+class FeedbackResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    category: str
+    message: str
+    created_at: datetime

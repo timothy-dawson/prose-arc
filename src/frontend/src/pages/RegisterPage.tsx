@@ -7,6 +7,8 @@ import { apiClient } from '@/api/client'
 import { useAuthStore } from '@/stores/authStore'
 import { GoogleOAuthButton } from '@/components/auth/GoogleOAuthButton'
 
+const INVITE_REQUIRED = import.meta.env.VITE_INVITE_REQUIRED === 'true'
+
 const registerSchema = z
   .object({
     email: z.string().email('Enter a valid email'),
@@ -17,10 +19,15 @@ const registerSchema = z
       .regex(/[a-zA-Z]/, 'Password must contain letters')
       .regex(/[0-9]/, 'Password must contain numbers'),
     confirm_password: z.string(),
+    invite_code: z.string().optional(),
   })
   .refine((d) => d.password === d.confirm_password, {
     message: 'Passwords do not match',
     path: ['confirm_password'],
+  })
+  .refine((d) => !INVITE_REQUIRED || (d.invite_code && d.invite_code.trim().length > 0), {
+    message: 'An invite code is required',
+    path: ['invite_code'],
   })
 
 type RegisterForm = z.infer<typeof registerSchema>
@@ -53,6 +60,7 @@ export function RegisterPage() {
         email: data.email,
         password: data.password,
         display_name: data.display_name || undefined,
+        invite_code: data.invite_code || undefined,
       })
       // Auto-login after registration
       const { data: tokens } = await apiClient.post<TokenResponse>('/auth/login', {
@@ -143,6 +151,25 @@ export function RegisterPage() {
                 <p className="mt-1 text-xs text-red-600">{errors.confirm_password.message}</p>
               )}
             </div>
+
+            {INVITE_REQUIRED && (
+              <div>
+                <label htmlFor="invite_code" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Invite code
+                </label>
+                <input
+                  {...register('invite_code')}
+                  id="invite_code"
+                  type="text"
+                  autoComplete="off"
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 uppercase tracking-widest"
+                  placeholder="XXXXXXXX"
+                />
+                {errors.invite_code && (
+                  <p className="mt-1 text-xs text-red-600">{errors.invite_code.message}</p>
+                )}
+              </div>
+            )}
 
             {serverError && (
               <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{serverError}</p>

@@ -5,6 +5,10 @@ Handles registration, login, token refresh, OAuth user creation,
 and profile updates. Publishes domain events via the event bus.
 """
 
+import secrets
+import string
+from datetime import UTC, datetime
+
 import bcrypt
 import structlog
 from fastapi import HTTPException, status
@@ -12,9 +16,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import create_access_token, create_refresh_token, decode_token
+from app.core.config import get_settings
 from app.core.events import bus
-from app.modules.identity.models import User
+from app.modules.identity.models import Feedback, InviteCode, User
 from app.modules.identity.schemas import (
+    FeedbackCreate,
     LoginRequest,
     TokenResponse,
     UserCreate,
@@ -22,6 +28,7 @@ from app.modules.identity.schemas import (
 )
 
 logger = structlog.get_logger(__name__)
+_settings = get_settings()
 
 
 def _hash_password(password: str) -> str:
@@ -41,6 +48,16 @@ class IdentityService:
     # -------------------------------------------------------------------------
 
     async def register_user(self, data: UserCreate) -> User:
+        # Validate invite code when beta gate is active
+        invite: InviteCode | None = None
+        if _settings.registration_requires_invite:
+            if not data.invite_code:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="An invite code is required to register",
+                )
+            invite = await self._get_invite_code(data.invite_code)
+
         existing = await self._get_user_by_email(data.email)
         if existing:
             raise HTTPException(
@@ -57,6 +74,11 @@ class IdentityService:
         )
         self._db.add(user)
         await self._db.flush()  # get user.id before commit
+
+        if invite:
+            invite.used_by_user_id = user.id
+            invite.used_at = datetime.now(UTC)
+            invite.is_active = False
 
         bus.publish("user.registered", {"user_id": str(user.id), "email": user.email})
         logger.info("user_registered", user_id=str(user.id), email=user.email)
@@ -185,8 +207,54 @@ class IdentityService:
     # Helpers
     # -------------------------------------------------------------------------
 
+    # -------------------------------------------------------------------------
+    # Invite codes
+    # -------------------------------------------------------------------------
+
+    async def _get_invite_code(self, code: str) -> InviteCode:
+        result = await self._db.execute(
+            select(InviteCode).where(InviteCode.code == code.upper())
+        )
+        invite = result.scalar_one_or_none()
+        if not invite or not invite.is_active or invite.used_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or already-used invite code",
+            )
+        return invite
+
+    # -------------------------------------------------------------------------
+    # Feedback
+    # -------------------------------------------------------------------------
+
+    async def submit_feedback(self, user_id: "uuid.UUID", data: FeedbackCreate) -> Feedback:  # type: ignore[name-defined]
+        import uuid
+
+        fb = Feedback(
+            user_id=user_id,
+            category=data.category,
+            message=data.message,
+        )
+        self._db.add(fb)
+        await self._db.flush()
+        return fb
+
+    # -------------------------------------------------------------------------
+    # Helpers
+    # -------------------------------------------------------------------------
+
     async def _get_user_by_email(self, email: str) -> User | None:
         result = await self._db.execute(
             select(User).where(User.email == email.lower())
         )
         return result.scalar_one_or_none()
+
+
+def generate_invite_codes(count: int, prefix: str = "") -> list[str]:
+    """Generate N random invite codes (uppercase alphanumeric, 8 chars + optional prefix)."""
+    alphabet = string.ascii_uppercase + string.digits
+    codes = []
+    for _ in range(count):
+        suffix = "".join(secrets.choice(alphabet) for _ in range(8))
+        codes.append(f"{prefix}{suffix}" if prefix else suffix)
+    return codes
